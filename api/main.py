@@ -1,63 +1,71 @@
-# api/main.py
-from fastapi import FastAPI, BackgroundTasks
-from pydantic import BaseModel
-from core.graph import YOLOResearchGraph
-import uuid
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from mcp_server.client import MCPClient
+from utils.config import Settings, QueryRequest
 
-app = FastAPI()
-research_graph = YOLOResearchGraph()
 
-class ResearchRequest(BaseModel):
-    research_goal: str
-    dataset_path: str
-    base_model: str = "yolov8n.pt"
-    max_iterations: int = 10
-    target_metric: str = "metrics/mAP50-95(B)"
-    target_threshold: float = 0.85
+settings = Settings()
 
-@app.post("/research/start")
-async def start_research(request: ResearchRequest, background_tasks: BackgroundTasks):
-    task_id = str(uuid.uuid4())
-    
-    initial_state = {
-        "messages": [],
-        "iteration": 0,
-        "research_goal": request.research_goal,
-        "dataset_info": {"path": request.dataset_path},
-        "base_model": request.base_model,
-        "current_model_path": request.base_model,
-        "best_model_path": "",
-        "best_metrics": {},
-        "experiment_history": [],
-        "failed_attempts_count": 0,
-        "consecutive_failures": 0,
-        "should_continue": True,
-        "max_iterations": request.max_iterations,
-        "target_metric": request.target_metric,
-        "target_threshold": request.target_threshold,
-        "last_error": None,
-        "recovery_attempts": 0,
-        "thread_id": task_id
-    }
-    
-    # Run research in background
-    background_tasks.add_task(research_graph.run_research, initial_state)
-    
-    return {"task_id": task_id, "status": "started"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    client = MCPClient()
+    try:
+        connected = await client.connect_to_server(settings.server_script_path)
+        if not connected:
+            raise HTTPException(
+                status_code=500, detail="Failed to connect to MCP Server"
+            )
+        app.state.client = client
+        yield
+    except Exception as e:
+        print(f"Error during lifespan: {e}")
+    finally:
+        await client.cleanup()
 
-@app.get("/research/status/{task_id}")
-async def get_research_status(task_id: str):
-    # Retrieve state from checkpoint
-    config = {"configurable": {"thread_id": task_id}}
-    state = await research_graph.graph.aget_state(config)
-    
-    if state:
+app = FastAPI(title="MCP Client API", lifespan=lifespan)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+@app.post("/query")
+async def process_query(request: QueryRequest):
+    """Process a query and return the response"""
+    try:
+        messages = await app.state.client.process_query(request.query)
+        return {"messages": messages}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tools")
+async def get_tools():
+    """Get the list of avaliable MCP tools"""
+    try:
+        tools = await app.state.client.get_mcp_tools()
         return {
-            "task_id": task_id,
-            "iteration": state.values.get("iteration", 0),
-            "best_metrics": state.values.get("best_metrics", {}),
-            "current_hypothesis": state.values.get("current_hypothesis", ""),
-            "experiment_count": len(state.values.get("experiment_history", []))
+            "tools": [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.inputSchema,
+                }
+                for tool in tools
+            ]
         }
-    
-    return {"error": "Task not found"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="localhost",
+        port=8000,
+        reload=True
+    )
