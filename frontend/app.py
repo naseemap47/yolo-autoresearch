@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.logger import logger
+from api.utils.logger import logger
 import asyncio
 from chatbot import Chatbot
 
