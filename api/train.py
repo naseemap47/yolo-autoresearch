@@ -3,8 +3,18 @@ from ultralytics import YOLO
 from fastapi.middleware.cors import CORSMiddleware
 from utils.config import TrainRequest
 import os
+import numpy as np
 
 
+def make_serializable(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: make_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [make_serializable(item) for item in obj]
+    else:
+        return obj
 
 app = FastAPI(title="YOLO Training API")
 
@@ -28,7 +38,8 @@ async def train_yolo_model(request: TrainRequest):
         lrf: Final learning rate as a fraction of the initial rate = (lr0 * lrf), used in conjunction with schedulers to adjust the learning rate over time. (eg. 0.01)
         momentum: Momentum factor for SGD or beta1 for Adam optimizers, influencing the incorporation of past gradients in the current update. (eg. 0.937)
         weight_decay: L2 regularization term, penalizing large weights to prevent overfitting. (eg. 0.0005)
-    
+        workers: Number of worker threads for data loading (per RANK if Multi-GPU training). Influences the speed of data preprocessing and feeding into the model, especially useful in multi-GPU setups. (eg. 8)
+        
     Returns:
         A dictionary containing the path to the best model weights, evaluation curves, and evaluation results.
     """
@@ -41,16 +52,16 @@ async def train_yolo_model(request: TrainRequest):
             name=request.name, optimizer=request.optimizer,
             single_cls=request.single_cls, lr0=request.lr0,
             lrf=request.lrf, momentum=request.momentum,
-            weight_decay=request.weight_decay,
+            weight_decay=request.weight_decay, workers=request.workers,
         )
         model_path = os.path.join(result.save_dir, "weights", "best.pt")
         # Evaluate the trained model and return the results
         # You can implement your evaluation logic here and return the results in the desired format
         return {
             "model_path": model_path,
-            "curves": result.curves,
-            "curves_results": result.curves_results,
-            "results": result.results_dict,
+            "curves": make_serializable(getattr(result, 'curves', [])),
+            "curves_results": make_serializable(getattr(result, 'curves_results', [])),
+            "results": make_serializable(getattr(result, 'results_dict', {})),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

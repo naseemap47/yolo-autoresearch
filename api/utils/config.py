@@ -27,9 +27,10 @@ class TrainRequest(BaseModel):
     imgsz: int
     device: int | str | list
     name: str
-    optimizer: str
-    single_cls: bool
-    lr0: float
-    lrf: float
-    momentum: float
-    weight_decay: float
+    optimizer: str = "auto"
+    single_cls: bool = False
+    lr0: float = 0.01
+    lrf: float = 0.01
+    momentum: float = 0.937
+    weight_decay: float = 0.0005
+    workers: int = 8
