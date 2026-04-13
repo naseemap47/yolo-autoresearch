@@ -210,3 +210,8 @@ __marimo__/
 experiments.py
 experiment.ipynb
 
+# YOLO Models
+*.pt
+*.onnx
+*runs/
+workspace/data/

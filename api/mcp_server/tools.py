@@ -2,6 +2,7 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.retrievers import WikipediaRetriever
 from langchain_community.retrievers import ArxivRetriever
+from ultralytics import YOLO
 
 
 async def search_web_links(query: str) -> list | None:
@@ -41,3 +42,27 @@ async def search_arxiv(query: str):
     except Exception as e:
         print(f"Error Search the query in ArXiv: {e}")
         raise
+
+async def train_model(
+        model_name: str, data_path: str, epochs: int,
+        patience: int, batch: int | float,
+        imgsz: int, device: int | str | list,
+        name: str, optimizer: str, single_cls: bool,
+        lr0: float, lrf: float, momentum: float, weight_decay: float,
+):
+    model = YOLO(model_name)
+    result =model.train(
+        data=data_path, epochs=epochs,
+        patience=patience, batch=batch,
+        imgsz=imgsz, device=device,
+        name=name, optimizer=optimizer,
+        single_cls=single_cls, lr0=lr0,
+        lrf=lrf, momentum=momentum,
+        weight_decay=weight_decay,
+    )
+    return result
+
+async def evaluate_model(model_path):
+    model = YOLO(model_path)
+    results = model.val()
+    return results

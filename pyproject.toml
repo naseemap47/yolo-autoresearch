@@ -13,5 +13,6 @@ dependencies = [
     "ollama>=0.6.1",
     "pymupdf>=1.27.2.2",
     "streamlit>=1.56.0",
+    "ultralytics>=8.4.37",
     "wikipedia>=1.4.0",
 ]

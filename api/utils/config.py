@@ -18,3 +18,18 @@ class ToolCall(BaseModel):
     name: str
     args: Dict[Any, Any]
 
+class TrainRequest(BaseModel):
+    model_name: str
+    data_path: str
+    epochs: int
+    patience: int
+    batch: int | float
+    imgsz: int
+    device: int | str | list
+    name: str
+    optimizer: str
+    single_cls: bool
+    lr0: float
+    lrf: float
+    momentum: float
+    weight_decay: float
