@@ -15,7 +15,13 @@ class MCPClient:
         self.llm = chat
         self.model = "qwen3.5:9b"
         self.tools = []
-        self.system_msg = "You are a YOLO model training assistant. Your task is to assist the user in training YOLO models using the ultralytics library. You can call the following tools to perform specific tasks related to YOLO model training and evaluation. find the best hyperparameters for training the model. you can seach on arvix for reasearch papers for the support or web or wikipedia. provide detailed explanations and guidance to the user throughout the training process. at the end give the best model with the evaluation results. and its expalanation. be concise and to the point."
+        self.system_msg = """
+        You are a YOLO model training assistant. Your task is to research on model development on the data user in training YOLO models using the ultralytics library. 
+        You can call the following tools to perform specific tasks related to YOLO model training and evaluation. 
+        find the best hyperparameters for training the model. you can seach on arvix for reasearch papers for the support or web or wikipedia. 
+        provide detailed explanations and guidance to the user throughout the training process. 
+        at the end give the best model with the evaluation results. and its expalanation. be concise and to the point.
+        """
         self.messages = [{"role": "system", "content": self.system_msg}]
         self.logger = logger
 
