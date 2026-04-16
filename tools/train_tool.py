@@ -1,79 +1,34 @@
-from typing import Any, Dict
-from mcp.server.fastmcp import FastMCP
-from tools import *
-from utils.config import TrainRequest
-from dotenv import load_dotenv
+from langchain.tools import tool
+from ultralytics import YOLO
+from typing import Dict, Any
 import httpx
-import os
 
 
-# Load env
-load_dotenv()
+async def train_model(
+        model_name: str, data_path: str, epochs: int,
+        patience: int, batch: int | float,
+        imgsz: int, device: int | str | list,
+        name: str, optimizer: str, single_cls: bool,
+        lr0: float, lrf: float, momentum: float, weight_decay: float,
+):
+    model = YOLO(model_name)
+    result =model.train(
+        data=data_path, epochs=epochs,
+        patience=patience, batch=batch,
+        imgsz=imgsz, device=device,
+        name=name, optimizer=optimizer,
+        single_cls=single_cls, lr0=lr0,
+        lrf=lrf, momentum=momentum,
+        weight_decay=weight_decay,
+    )
+    return result
 
-# MCP - FastAPI
-mcp = FastMCP("yolo-autoresearch-mcp")
+async def evaluate_model(model_path):
+    model = YOLO(model_path)
+    results = model.val()
+    return results
 
-@mcp.tool()
-async def web_search(query: str):
-    """
-    Web Search Tool to search and read docs, articles and News from web.
-    While using this tool use wiki_search tool for searching in wikipedia and use this web_search tool for searching in other web sources.
-    
-    Args:
-        query: The query to search for (eg. "Who is Elon Musk ?", "History of Japan", "What is the latest news about AI ?")
-    
-    Returns:
-        extracted text
-    """
-    web_results = await search_web_links(query)
-    if len(web_results) == 0:
-        return "No results found"
-    else:
-        text = ""
-        for web_result in web_results:
-            text += await read_url(web_result['link'])
-        return text
 
-@mcp.tool()
-async def wiki_search(query: str):
-    """
-    Wikipedia search tool to search and and get the details about the query.
-
-    Args:
-        query: The query to search for (eg. "Who is Elon Musk ?", "Japan history")
-    
-    Returns:
-        extracted text from wikipedia about the query
-    """
-    docs = await search_wiki(query)
-    if len(docs) == 0:
-        return "No results found"
-    else:
-        text = ""
-        for doc in docs:
-            text += doc.page_content
-        return text
-
-@mcp.tool()
-async def arxiv_search(query: str):
-    """
-    ArXiv search tool to search about research papers from ArXiv, and get the details about the query.
-
-    Args:
-        query: The query to search for (eg. "Expain me about 1605.08386 research paper.", "explain me about Transformers from Ai model architecture")
-    
-    Returns:
-        extracted text from ArXiv about the query
-    """
-    docs = await search_arxiv(query)
-    if len(docs) == 0:
-        return "No results found"
-    else:
-        text = ""
-        for doc in docs:
-            text += doc.page_content
-        return text
-    
 # @mcp.tool()
 # async def train_yolo_model(
 #     model_name: str, data_path: str, epochs: int,
@@ -132,8 +87,7 @@ async def arxiv_search(query: str):
 #         "results": evaluate.results_dict,
 #     }
 
-
-@mcp.tool()
+@tool
 async def train_model(
     model_name: str,
     data_path: str,
@@ -195,6 +149,3 @@ async def train_model(
     async with httpx.AsyncClient(timeout=10000) as client:
         response = await client.post("http://192.168.0.47:8080/train", json=request_data)
         return response.json()
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")

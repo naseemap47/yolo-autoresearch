@@ -1,10 +1,27 @@
 from fastapi import FastAPI, HTTPException
 from ultralytics import YOLO
 from fastapi.middleware.cors import CORSMiddleware
-from utils.config import TrainRequest
-import os
+from pydantic import BaseModel
 import numpy as np
+import os
 
+
+class TrainRequest(BaseModel):
+    model_name: str
+    data_path: str
+    epochs: int
+    patience: int
+    batch: int | float
+    imgsz: int
+    device: int | str | list
+    name: str
+    optimizer: str = "auto"
+    single_cls: bool = False
+    lr0: float = 0.01
+    lrf: float = 0.01
+    momentum: float = 0.937
+    weight_decay: float = 0.0005
+    workers: int = 8
 
 def make_serializable(obj):
     if isinstance(obj, np.ndarray):
@@ -41,7 +58,7 @@ async def train_yolo_model(request: TrainRequest):
         workers: Number of worker threads for data loading (per RANK if Multi-GPU training). Influences the speed of data preprocessing and feeding into the model, especially useful in multi-GPU setups. (eg. 8)
         
     Returns:
-        A dictionary containing the path to the best model weights, evaluation curves, and evaluation results.
+        A dictionary containing the path to the best model weights, evaluation results.
     """
     try:
         model = YOLO(request.model_name)
@@ -59,8 +76,6 @@ async def train_yolo_model(request: TrainRequest):
         # You can implement your evaluation logic here and return the results in the desired format
         return {
             "model_path": model_path,
-            "curves": make_serializable(getattr(result, 'curves', [])),
-            "curves_results": make_serializable(getattr(result, 'curves_results', [])),
             "results": make_serializable(getattr(result, 'results_dict', {})),
         }
     except Exception as e:

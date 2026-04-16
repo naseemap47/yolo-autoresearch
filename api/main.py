@@ -1,29 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from mcp_server.client import MCPClient
-from utils.config import Settings, QueryRequest
+from pydantic import BaseModel
 
 
-settings = Settings()
+class QueryRequest(BaseModel):
+    query: str
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    client = MCPClient()
-    try:
-        connected = await client.connect_to_server(settings.server_script_path)
-        if not connected:
-            raise HTTPException(
-                status_code=500, detail="Failed to connect to MCP Server"
-            )
-        app.state.client = client
-        yield
-    except Exception as e:
-        print(f"Error during lifespan: {e}")
-    finally:
-        await client.cleanup()
-
-app = FastAPI(title="MCP Client API", lifespan=lifespan)
+app = FastAPI(title="MCP Client API")
 
 # Add CORS middleware
 app.add_middleware(
@@ -43,23 +26,6 @@ async def process_query(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/tools")
-async def get_tools():
-    """Get the list of avaliable MCP tools"""
-    try:
-        tools = await app.state.client.get_mcp_tools()
-        return {
-            "tools": [
-                {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "input_schema": tool.inputSchema,
-                }
-                for tool in tools
-            ]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
