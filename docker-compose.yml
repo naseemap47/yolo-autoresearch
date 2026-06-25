@@ -1,0 +1,87 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# YOLO AutoResearch — Docker Compose
+#
+# Two deployment targets:
+#   LLM Node  (your local machine) : frontend
+#   GPU Node  (training server)    : training-api + mlflow
+#
+# Run on GPU node:   docker compose up training-api mlflow
+# Run on LLM node:   docker compose up frontend
+# Run everything:    docker compose up   (for single-machine testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── MLflow Tracking Server ──────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: yolo_mlflow
+    working_dir: /app
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlflow.db:/app/mlflow.db
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "pip install mlflow -q &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri sqlite:///mlflow.db
+               --default-artifact-root /app/mlruns"
+    restart: unless-stopped
+    networks:
+      - yolo_net
+
+  # ── FastAPI Training Server (runs on GPU node) ──────────────────────────────
+  training-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: yolo_training_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./datasets:/app/datasets       # uploaded datasets
+      - ./yolo_runs:/app/yolo_runs     # training outputs
+      - ./api_jobs.db:/app/api_jobs.db # job database
+      - ./uploads_tmp:/app/uploads_tmp # chunked upload temp dir
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+    networks:
+      - yolo_net
+    # GPU support — uncomment if using nvidia-docker runtime
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ── Streamlit Frontend (runs on LLM node) ───────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: yolo_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - TRAINING_API_URL=http://training-api:8000
+      - MLFLOW_URL=http://mlflow:5000
+      - OLLAMA_URL=http://host.docker.internal:11434
+    depends_on:
+      - training-api
+    restart: unless-stopped
+    networks:
+      - yolo_net
+
+networks:
+  yolo_net:
+    driver: bridge
