@@ -7,7 +7,7 @@ def main():
     parser.add_argument("--host", type=str, default="192.168.0.84", help="Remote GPU server IP")
     parser.add_argument("--target-map", type=float, default=0.8, help="Target mAP50-95 threshold")
     parser.add_argument("--max-cycles", type=int, default=5, help="Maximum number of training cycles")
-    parser.add_argument("--llm", type=str, default="qwen:3.5-0.8b", help="Ollama model to use")
+    parser.add_argument("--llm", type=str, default="qwen3.5:0.8b", help="Ollama model to use")
     args = parser.parse_args()
 
     agent = create_agent_graph(host=args.host, model_name=args.llm)

@@ -1,9 +1,10 @@
 import json
+import re
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 
 class Planner:
-    def __init__(self, model_name: str = "qwen:3.5-0.8b"):
+    def __init__(self, model_name: str = "qwen3.5:0.8b"):
         self.llm = OllamaLLM(model=model_name)
         self.prompt = PromptTemplate(
             input_variables=["dataset_stats", "history"],
@@ -48,6 +49,11 @@ JSON Response:"""
                 result = result.split("```json")[1].split("```")[0].strip()
             elif "```" in result:
                 result = result.split("```")[1].split("```")[0].strip()
+                
+            # Regex to find the JSON block even if there is surrounding text
+            json_match = re.search(r'\{.*\}', result, re.DOTALL)
+            if json_match:
+                result = json_match.group(0)
                 
             config = json.loads(result)
             return config

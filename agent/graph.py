@@ -13,7 +13,7 @@ class AgentState(TypedDict):
     current_config: Dict[str, Any]
     final_result: str
 
-def create_agent_graph(host: str = "192.168.0.84", model_name: str = "qwen:3.5-0.8b"):
+def create_agent_graph(host: str = "192.168.0.84", model_name: str = "qwen3.5:0.8b"):
     client = GPUClient(host=host)
     planner = Planner(model_name=model_name)
     
