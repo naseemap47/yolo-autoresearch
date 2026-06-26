@@ -18,7 +18,7 @@ This machine handles the YOLO model training. It must have GPU access and the da
 1. Clone this repository on the GPU machine.
 2. Install the required dependencies:
    ```bash
-   uv add -r server/requirements.txt
+   uv sync
    ```
 
 ### Running the Server
@@ -44,7 +44,7 @@ This machine controls the research loop.
 1. Clone this repository locally.
 2. Install the required dependencies:
    ```bash
-   uv add -r agent/requirements.txt
+   uv sync
    ```
 
 ### Configuration
