@@ -96,10 +96,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Helper for URLs ---
+    function getApiUrl() {
+        let url = apiUrlInput.value.trim();
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'http://' + url;
+        }
+        if (url.endsWith('/')) {
+            url = url.slice(0, -1);
+        }
+        return url;
+    }
+
     // --- Fetch API Data ---
     async function fetchProjects() {
         try {
-            const res = await fetch(`${apiUrlInput.value}/api/projects`);
+            const res = await fetch(`${getApiUrl()}/api/projects`);
             projectsData = await res.json();
             projectSelect.innerHTML = '<option value="">Select Project</option>';
             projectsData.forEach(p => {
@@ -120,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchDatasets() {
         try {
-            const res = await fetch(`${apiUrlInput.value}/api/data/list`);
+            const res = await fetch(`${getApiUrl()}/api/data/list`);
             datasetsData = await res.json();
             
             // Update Sidebar
@@ -179,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteDataset = async function(name) {
         if(confirm(`Are you sure you want to delete dataset ${name}?`)) {
             try {
-                await fetch(`${apiUrlInput.value}/api/data/${name}`, { method: 'DELETE' });
+                await fetch(`${getApiUrl()}/api/data/${name}`, { method: 'DELETE' });
                 fetchDatasets();
             } catch(e) {
                 alert('Error deleting dataset');
@@ -194,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!name) return alert('Enter a project name');
         
         try {
-            const res = await fetch(`${apiUrlInput.value}/api/projects`, {
+            const res = await fetch(`${getApiUrl()}/api/projects`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description: desc })
@@ -211,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`Error: ${err.detail}`);
             }
         } catch (e) {
-            alert('Failed to create project');
+            alert('Failed to create project: ' + e.message);
         }
     });
 
@@ -226,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Init
-            let initRes = await fetch(`${apiUrlInput.value}/api/data/upload/init`, {
+            let initRes = await fetch(`${getApiUrl()}/api/data/upload/init`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dataset_name: dsName, filename: file.name })
@@ -246,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('chunk_index', i);
                 formData.append('chunk', chunk, `chunk_${i}`);
 
-                await fetch(`${apiUrlInput.value}/api/data/upload/chunk/${upload_id}`, {
+                await fetch(`${getApiUrl()}/api/data/upload/chunk/${upload_id}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -257,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Finalize
-            await fetch(`${apiUrlInput.value}/api/data/upload/finalize/${upload_id}`, {
+            await fetch(`${getApiUrl()}/api/data/upload/finalize/${upload_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ total_chunks: totalChunks })
@@ -286,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchJobs() {
         try {
-            const res = await fetch(`${apiUrlInput.value}/api/jobs`);
+            const res = await fetch(`${getApiUrl()}/api/jobs`);
             const jobs = await res.json();
             const tbody = document.querySelector('#jobs-table tbody');
             const dlSelect = document.getElementById('download-run-select');
@@ -329,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dlSelect.addEventListener('change', () => {
                 const dlLink = document.getElementById('download-link');
                 if (dlSelect.value) {
-                    dlLink.href = `${apiUrlInput.value}/api/train/download/${dlSelect.value}`;
+                    dlLink.href = `${getApiUrl()}/api/train/download/${dlSelect.value}`;
                     dlLink.removeAttribute('disabled');
                 } else {
                     dlLink.href = '#';
@@ -351,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dataset_path: selectedDatasetYaml || selectedDatasetPath,
             target_accuracy: parseFloat(targetAccInput.value),
             max_cycles: parseInt(maxCyclesInput.value),
-            api_url: apiUrlInput.value,
+            api_url: getApiUrl(),
             mlflow_uri: mlflowUrlInput.value,
             ollama_url: ollamaUrlInput.value
         };
@@ -483,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.run_id && (data.is_running || s.startsWith('Cycle'))) {
             document.getElementById('live-monitor-container').classList.remove('hidden');
             // Fetch live progress from GPU API directly
-            fetch(`${apiUrlInput.value}/api/train/status/${state.run_id}`)
+            fetch(`${getApiUrl()}/api/train/status/${state.run_id}`)
                 .then(r => r.json())
                 .then(live => {
                     const prog = live.progress || {};
