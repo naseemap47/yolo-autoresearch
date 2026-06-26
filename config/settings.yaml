@@ -1,0 +1,10 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+agent:
+  gpu_host: "192.168.0.84"
+  llm_model: "qwen3.5:0.8b"
+  target_map: 0.8
+  max_cycles: 5
+  dataset_yaml_path: "/home/eternalcm/Downloads/Test/data.yaml"

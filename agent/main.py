@@ -1,21 +1,37 @@
 import argparse
+import yaml
+import os
 from .graph import create_agent_graph
 
 def main():
     parser = argparse.ArgumentParser(description="YOLO Auto-Research Agent")
-    parser.add_argument("--data", type=str, required=True, help="Path to data.yaml on the remote GPU server")
-    parser.add_argument("--host", type=str, default="192.168.0.84", help="Remote GPU server IP")
-    parser.add_argument("--target-map", type=float, default=0.8, help="Target mAP50-95 threshold")
-    parser.add_argument("--max-cycles", type=int, default=5, help="Maximum number of training cycles")
-    parser.add_argument("--llm", type=str, default="qwen3.5:0.8b", help="Ollama model to use")
+    parser.add_argument("--config", type=str, default="config/settings.yaml", help="Path to config file")
     args = parser.parse_args()
 
-    agent = create_agent_graph(host=args.host, model_name=args.llm)
+    if not os.path.exists(args.config):
+        print(f"Config file not found at {args.config}. Please create it.")
+        return
+
+    with open(args.config, 'r') as f:
+        config = yaml.safe_load(f)
+
+    agent_cfg = config.get("agent", {})
+    gpu_host = agent_cfg.get("gpu_host", "192.168.0.84")
+    llm_model = agent_cfg.get("llm_model", "qwen3.5:0.8b")
+    target_map = agent_cfg.get("target_map", 0.8)
+    max_cycles = agent_cfg.get("max_cycles", 5)
+    dataset_yaml_path = agent_cfg.get("dataset_yaml_path")
+
+    if not dataset_yaml_path:
+        print("dataset_yaml_path is required in config.")
+        return
+
+    agent = create_agent_graph(host=gpu_host, model_name=llm_model)
     
     initial_state = {
-        "dataset_yaml_path": args.data,
-        "target_map": args.target_map,
-        "max_cycles": args.max_cycles,
+        "dataset_yaml_path": dataset_yaml_path,
+        "target_map": target_map,
+        "max_cycles": max_cycles,
         "current_cycle": 0,
         "dataset_stats": {},
         "history": [],
@@ -24,7 +40,7 @@ def main():
     }
     
     print("Starting YOLO Auto-Research Agent...")
-    print(f"Target mAP: {args.target_map}, Max Cycles: {args.max_cycles}")
+    print(f"Target mAP: {target_map}, Max Cycles: {max_cycles}, LLM: {llm_model}, Host: {gpu_host}")
     
     final_state = agent.invoke(initial_state)
     

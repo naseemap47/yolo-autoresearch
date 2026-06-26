@@ -22,9 +22,9 @@ This machine handles the YOLO model training. It must have GPU access and the da
    ```
 
 ### Running the Server
-Start the FastAPI server. **Important**: You must bind it to `0.0.0.0` so it can accept connections from the outside.
+The server reads `config/settings.yaml` for its host and port. Start it using the provided script:
 ```bash
-python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
+python run_server.py
 ```
 
 ---
@@ -47,17 +47,27 @@ This machine controls the research loop.
    pip install -r agent/requirements.txt
    ```
 
-### Running the Agent
-Start the auto-research agent by providing the **absolute path** to the `data.yaml` *as it exists on the remote GPU PC*. 
+### Configuration
+Edit the `config/settings.yaml` file to match your environment:
+```yaml
+server:
+  host: "0.0.0.0"
+  port: 8000
 
-For example:
+agent:
+  gpu_host: "192.168.0.84"
+  llm_model: "qwen3.5:0.8b"
+  target_map: 0.8
+  max_cycles: 5
+  dataset_yaml_path: "/home/eternalcm/Downloads/Test/data.yaml"
+```
+**Important:** `dataset_yaml_path` must be the absolute path to `data.yaml` *as it exists on the remote GPU PC*.
+
+### Running the Agent
+Start the auto-research agent. It will automatically load your configuration from `config/settings.yaml`:
+
 ```bash
-python -m agent.main \
-  --data /absolute/path/to/dataset/on/gpu/data.yaml \
-  --host <GPU_SERVER_IP> \
-  --target-map 0.8 \
-  --max-cycles 5 \
-  --llm qwen3.5:0.8b
+python -m agent.main
 ```
 
 ---
