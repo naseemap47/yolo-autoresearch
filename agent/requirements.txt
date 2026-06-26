@@ -1,0 +1,6 @@
+langgraph
+langchain-community
+langchain-ollama
+pydantic
+requests
+pyyaml
