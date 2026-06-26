@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO AutoResearch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2 class="sidebar-title">⚙️ Settings</h2>
+            
+            <div class="sidebar-section">
+                <label>Training API URL</label>
+                <input type="text" id="api-url" value="http://localhost:8000">
+                <label>MLflow URL</label>
+                <input type="text" id="mlflow-url" value="http://localhost:5000">
+                <label>Ollama URL</label>
+                <input type="text" id="ollama-url" value="http://localhost:11434">
+            </div>
+
+            <hr>
+
+            <div class="sidebar-section collapsible" id="project-section">
+                <div class="section-header">
+                    <h3>📁 Project</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <select id="project-select">
+                        <option value="">Select Project</option>
+                    </select>
+                    <p id="project-desc" class="caption"></p>
+                    <button id="toggle-new-project-btn" class="secondary-btn">➕ New Project</button>
+                    <div id="new-project-form" class="hidden">
+                        <input type="text" id="new-proj-name" placeholder="Name">
+                        <textarea id="new-proj-desc" placeholder="Description" rows="2"></textarea>
+                        <button id="create-project-btn">Create</button>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="sidebar-section collapsible" id="dataset-section">
+                <div class="section-header">
+                    <h3>📦 Dataset</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <select id="dataset-select">
+                        <option value="">Select Dataset</option>
+                    </select>
+                    <p id="dataset-info" class="caption"></p>
+                    <button id="toggle-upload-btn" class="secondary-btn">⬆️ Upload Dataset (ZIP)</button>
+                    <div id="upload-form" class="hidden">
+                        <input type="text" id="upload-ds-name" placeholder="Dataset Name (e.g. helmet_v1)">
+                        <input type="file" id="upload-file" accept=".zip">
+                        <button id="upload-btn">Upload</button>
+                        <div id="upload-progress-container" class="hidden">
+                            <div class="progress-bar"><div id="upload-progress" class="progress-fill"></div></div>
+                            <span id="upload-status-text">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="sidebar-section">
+                <h3>🚀 Start Research</h3>
+                <label>Experiment Name</label>
+                <input type="text" id="exp-name" value="Exp_01">
+                
+                <div class="slider-group">
+                    <label>Target mAP50: <span id="target-acc-val">0.80</span></label>
+                    <input type="range" id="target-acc" min="0.1" max="0.99" step="0.01" value="0.80">
+                </div>
+                
+                <div class="slider-group">
+                    <label>Max Search Cycles: <span id="max-cycles-val">3</span></label>
+                    <input type="range" id="max-cycles" min="1" max="10" step="1" value="3">
+                </div>
+                
+                <button id="start-btn" class="primary-btn" disabled>▶ Start Autoresearch</button>
+                <button id="stop-btn" class="danger-btn hidden">⏹ Stop Agent</button>
+                <p id="start-warning" class="caption">⚠️ Select a project and dataset to start.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1 class="main-title">🤖 YOLO AutoResearch</h1>
+                <p class="subtitle">Agentic framework — automated model selection, hyperparameter tuning & iterative training</p>
+            </header>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-loop">🔬 Research Loop</button>
+                <button class="tab-btn" data-tab="tab-mlflow">📈 MLflow</button>
+                <button class="tab-btn" data-tab="tab-data">📦 Data Management</button>
+                <button class="tab-btn" data-tab="tab-history">🗃️ History & Downloads</button>
+            </div>
+
+            <div class="tab-content">
+                <!-- Tab: Research Loop -->
+                <div id="tab-loop" class="tab-pane active">
+                    <div id="loop-empty-state">
+                        <p class="info-box">Configure project & dataset in the sidebar, then click <strong>▶ Start Autoresearch</strong>.</p>
+                    </div>
+                    
+                    <div id="loop-active-state" class="hidden">
+                        <!-- Stepper -->
+                        <div class="stepper" id="stepper">
+                            <div class="step" id="step-1"><div class="sbadge">1</div><div class="slabel">Data Analysis</div></div>
+                            <div class="step" id="step-2"><div class="sbadge">2</div><div class="slabel">LLM Selects</div></div>
+                            <div class="step" id="step-3"><div class="sbadge">3</div><div class="slabel">YOLO Train</div></div>
+                            <div class="step" id="step-4"><div class="sbadge">4</div><div class="slabel">Evaluate</div></div>
+                            <div class="step" id="step-5"><div class="sbadge">5</div><div class="slabel">LLM Adjust</div></div>
+                        </div>
+
+                        <!-- Status Alert -->
+                        <div id="agent-status-alert" class="alert info">🔄 Status: Idle</div>
+
+                        <!-- Metrics Grid -->
+                        <div class="metrics-grid">
+                            <div class="card">
+                                <div class="metric-lbl">Cycle</div>
+                                <div class="metric-val" id="metric-cycle">0 / ?</div>
+                            </div>
+                            <div class="card">
+                                <div class="metric-lbl">Active Model</div>
+                                <div class="metric-val" id="metric-model">—</div>
+                            </div>
+                            <div class="card">
+                                <div class="metric-lbl">Best mAP50</div>
+                                <div class="metric-val" id="metric-map50">0.0000</div>
+                            </div>
+                            <div class="card">
+                                <div class="metric-lbl">Target</div>
+                                <div class="metric-val" id="metric-target">0.80</div>
+                            </div>
+                        </div>
+
+                        <!-- Dataset Stats -->
+                        <div id="dataset-stats-container" class="hidden">
+                            <h3 class="section-heading">📊 Dataset Analysis</h3>
+                            <div class="stats-grid">
+                                <div>
+                                    <p><strong>Classes:</strong> <span id="stat-classes"></span></p>
+                                    <p><strong>Names:</strong> <span id="stat-names"></span></p>
+                                </div>
+                                <div>
+                                    <p><strong>Images:</strong> <span id="stat-images"></span></p>
+                                    <p><strong>Boxes scanned:</strong> <span id="stat-boxes"></span></p>
+                                </div>
+                                <div>
+                                    <p><strong>Small bboxes:</strong> <span id="stat-small"></span>%</p>
+                                    <p><strong>Medium bboxes:</strong> <span id="stat-medium"></span>%</p>
+                                    <p><strong>Large bboxes:</strong> <span id="stat-large"></span>%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Monitor -->
+                        <div id="live-monitor-container" class="hidden">
+                            <h3 class="section-heading">🎛️ Live Training Monitor</h3>
+                            <div class="progress-bar"><div id="train-progress" class="progress-fill"></div></div>
+                            <p id="train-progress-text" class="caption">Epoch 0/0 — 0%</p>
+                            <div id="train-logs" class="log-box"></div>
+                        </div>
+
+                        <!-- History -->
+                        <div id="history-container" class="hidden">
+                            <h3 class="section-heading">🧠 Research Cycle History</h3>
+                            <div id="history-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: MLflow -->
+                <div id="tab-mlflow" class="tab-pane">
+                    <h3 class="section-heading">📈 MLflow Experiment Tracking</h3>
+                    <iframe id="mlflow-iframe" src="" width="100%" height="700px" style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; background: #fff;"></iframe>
+                </div>
+
+                <!-- Tab: Data Management -->
+                <div id="tab-data" class="tab-pane">
+                    <div class="flex-header">
+                        <h3 class="section-heading">📦 Datasets on Training Server</h3>
+                        <button id="refresh-data-btn" class="secondary-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="data-list-container"></div>
+                </div>
+
+                <!-- Tab: History & Downloads -->
+                <div id="tab-history" class="tab-pane">
+                    <div class="flex-header">
+                        <h3 class="section-heading">🗃️ All Training Runs</h3>
+                        <button id="refresh-jobs-btn" class="secondary-btn">🔄 Refresh Jobs</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="jobs-table">
+                            <thead>
+                                <tr>
+                                    <th>Run ID</th>
+                                    <th>Project</th>
+                                    <th>Experiment</th>
+                                    <th>Model</th>
+                                    <th>Status</th>
+                                    <th>mAP50</th>
+                                    <th>Precision</th>
+                                    <th>Recall</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <h4 class="section-heading" style="margin-top: 2rem;">⬇️ Download Artifacts</h4>
+                    <div class="download-section">
+                        <select id="download-run-select">
+                            <option value="">Select run</option>
+                        </select>
+                        <a id="download-link" href="#" target="_blank" class="primary-btn" style="display:inline-block; text-decoration:none;" disabled>⬇️ Download ZIP</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>

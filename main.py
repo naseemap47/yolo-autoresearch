@@ -20,17 +20,9 @@ def start_api():
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
 
 def start_frontend():
-    print("Starting Streamlit Frontend Workspace...")
-    streamlit_bin = get_venv_bin("streamlit")
-    cmd = [
-        streamlit_bin, "run", "frontend/app.py", 
-        "--server.address", "0.0.0.0", 
-        "--server.port", "8501"
-    ]
-    try:
-        subprocess.run(cmd)
-    except KeyboardInterrupt:
-        print("Stopping Streamlit...")
+    print("Starting Orchestrator Frontend API...")
+    import uvicorn
+    uvicorn.run("orchestrator:app", host="0.0.0.0", port=8501, reload=True)
 
 def start_mlflow():
     print("Starting MLflow Tracking Server...")
@@ -53,7 +45,6 @@ def start_all():
     print("=========================================")
     
     mlflow_bin = get_venv_bin("mlflow")
-    streamlit_bin = get_venv_bin("streamlit")
     
     processes = []
     try:
@@ -82,15 +73,15 @@ def start_all():
         # Give backend & MLflow a second to spin up
         time.sleep(2)
         
-        # 3. Start Streamlit Frontend
+        # 3. Start Orchestrator Frontend
         frontend_cmd = [
-            streamlit_bin, "run", "frontend/app.py",
-            "--server.address", "0.0.0.0",
-            "--server.port", "8501"
+            sys.executable, "-m", "uvicorn", "orchestrator:app",
+            "--host", "0.0.0.0",
+            "--port", "8501"
         ]
         frontend_proc = subprocess.Popen(frontend_cmd)
-        processes.append(("Streamlit Frontend", frontend_proc))
-        print("✓ Started Streamlit Frontend (http://localhost:8501)")
+        processes.append(("Orchestrator Frontend", frontend_proc))
+        print("✓ Started Orchestrator Frontend (http://localhost:8501)")
         
         print("\nAll servers are running. Press Ctrl+C to terminate all services.")
         

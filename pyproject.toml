@@ -4,10 +4,8 @@ version = "0.1.0"
 description = "YOLO AutoResearch Agentic Framework"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
     "fastapi",
     "uvicorn",
-    "streamlit",
     "langgraph",
     "langchain-core",
     "ultralytics",

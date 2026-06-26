@@ -11,12 +11,12 @@
 │        LLM Node (local)         │        │      GPU Training Node           │
 │                                 │        │                                  │
 │  ┌──────────────────────────┐   │  HTTP  │  ┌───────────────────────────┐   │
-│  │  Streamlit Frontend      │◄──┼────────┼─►│  FastAPI Training API     │   │
-│  │  (frontend/app.py)       │   │        │  │  (api/main.py)            │   │
+│  │  Static HTML/JS Frontend │◄──┼────────┼─►│  FastAPI Training API     │   │
+│  │  (frontend/index.html)   │   │        │  │  (api/main.py)            │   │
 │  └──────────────────────────┘   │        │  └─────────────┬─────────────┘   │
 │  ┌──────────────────────────┐   │        │                │ subprocess      │
-│  │  LangGraph Agent         │   │        │  ┌─────────────▼─────────────┐   │
-│  │  (core/graph.py)         │   │        │  │  YOLO Train Worker        │   │
+│  │  FastAPI Orchestrator    │   │        │  ┌─────────────▼─────────────┐   │
+│  │  (orchestrator.py)       │   │        │  │  YOLO Train Worker        │   │
 │  └──────────────────────────┘   │        │  │  (api/train_worker.py)    │   │
 │  ┌──────────────────────────┐   │        │  └─────────────┬─────────────┘   │
 │  │  Ollama LLM              │   │        │                │ logs/metrics    │
@@ -63,12 +63,12 @@ yolo-autoresearch/
 │   ├── main.py          # FastAPI training server (runs on GPU node)
 │   ├── train_worker.py  # YOLO training subprocess worker
 │   └── analyzer.py      # Dataset analysis (bbox stats, class dist)
-├── core/
-│   ├── graph.py         # LangGraph workflow nodes + edges
-│   └── state.py         # AgentState TypedDict
-├── frontend/
-│   └── app.py           # Streamlit UI
-├── datasets/            # Uploaded datasets (on GPU node)
+├── orchestrator.py    # FastAPI orchestrator server (runs LangGraph + serves frontend)
+├── frontend/          # HTML/JS UI
+│   ├── index.html     # Main HTML layout
+│   ├── style.css      # Custom UI styles
+│   └── app.js         # Frontend logic
+├── datasets/          # Uploaded datasets (on GPU node)
 ├── yolo_runs/           # Training outputs (weights, logs, charts)
 ├── mlruns/              # MLflow artifacts
 ├── docker-compose.yml
@@ -88,7 +88,7 @@ uv sync   # installs from pyproject.toml
 
 Or with pip:
 ```bash
-pip install fastapi uvicorn streamlit langgraph langchain-core \
+pip install fastapi uvicorn langgraph langchain-core \
             ultralytics mlflow requests pandas pyyaml matplotlib python-multipart
 ```
 
@@ -109,7 +109,7 @@ python main.py start-all
 This starts:
 - **MLflow** → http://localhost:5000
 - **FastAPI Training API** → http://localhost:8000
-- **Streamlit UI** → http://localhost:8501
+- **HTML/JS UI** → http://localhost:8501
 
 ---
 
@@ -134,9 +134,9 @@ docker compose up training-api mlflow
 
 ### LLM Node — Local Machine
 
-Set the Training API URL in Streamlit sidebar to point to your GPU machine:
+Set the URLs in the UI sidebar to point to your GPU machine:
 ```
-http://<GPU_IP>:8000
+http://<GPU_IP>:8000   ← Training API
 http://<GPU_IP>:5000   ← MLflow
 ```
 
