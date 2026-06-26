@@ -51,7 +51,7 @@ This machine controls the research loop.
 Edit the `config/settings.yaml` file to match your environment:
 ```yaml
 server:
-  host: "0.0.0.0"
+  host: "192.168.0.84"
   port: 8000
 
 agent:
