@@ -86,26 +86,77 @@ On **first run**, the RAG module will embed and index the Ultralytics documentat
 
 ---
 
-## 3. RAG Integration
-
-### How It Works
+## 3. How It Works
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    Agent Planning Cycle                   │
-│                                                           │
-│  dataset_stats + training history                         │
-│         │                                                 │
-│         ▼                                                 │
-│  ┌─────────────┐   semantic query   ┌─────────────────┐  │
-│  │   Planner   │ ─────────────────► │ UltralyticsRAG  │  │
-│  │  (Qwen LLM) │ ◄───────────────── │  (ChromaDB)     │  │
-│  └─────────────┘   top-k doc chunks └─────────────────┘  │
-│         │                                    ▲            │
-│         │  JSON config                       │            │
-│         ▼                            finetune/            │
-│   train_model(...)              ultralytics_raw.txt       │
-└──────────────────────────────────────────────────────────┘
+                          LANGGRAPH STATE MACHINE
+ ┌────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                │
+ │  AgentState                                                                    │
+ │  ┌──────────────────────────────────────────────────────────────────────────┐  │
+ │  │ dataset_yaml_path │ dataset_stats │ history │ current_config │ cycle ... │  │
+ │  └──────────────────────────────────────────────────────────────────────────┘  │
+ │                  │                                                              │
+ │                  ▼                                                              │
+ │         ┌────────────────┐                                                      │
+ │         │  analyze_data  │  ← runs once; calls GPU server /dataset/analyze     │
+ │         │                │    populates dataset_stats in state                  │
+ │         └────────────────┘                                                      │
+ │                  │                                                              │
+ │                  ▼                                                              │
+ │   ┌──────────────────────────┐        RAG RETRIEVER                            │
+ │   │       plan_model         │◄──────────────────────────────────────────────┐ │
+ │   │                          │  1. build semantic query from state            │ │
+ │   │  Planner.plan(           │     (num_classes, total_images, last mAP)      │ │
+ │   │    dataset_stats,        │                                                │ │
+ │   │    history          )    │  2. UltralyticsRetriever.query(q)              │ │
+ │   │                          │     ┌─────────────────────────────────────┐   │ │
+ │   │  ┌────────────────────┐  │     │  ChromaDB  (agent/vectorstore/)     │   │ │
+ │   │  │  OllamaLLM         │  │     │  ┌──────┐ ┌──────┐ ┌──────┐        │   │ │
+ │   │  │  prompt:           │  │     │  │chunk │ │chunk │ │chunk │  ...   │   │ │
+ │   │  │  {context}   ◄─────┼──┼─────┤  │ lr0  │ │ w_d  │ │ aug  │        │   │ │
+ │   │  │  {dataset_stats}   │  │     │  └──────┘ └──────┘ └──────┘        │   │ │
+ │   │  │  {history}         │  │     │  embedded from                      │   │ │
+ │   │  └────────────────────┘  │     │  finetune/ultralytics_raw.txt       │   │ │
+ │   │                          │     └─────────────────────────────────────┘   │ │
+ │   │  → JSON config           │                                                │ │
+ │   │    model_name            │  3. top-k chunks injected as {context}         │ │
+ │   │    epochs                │     into LLM prompt                            │ │
+ │   │    batch_size            │────────────────────────────────────────────────┘ │
+ │   │    imgsz, lr0            │                                                  │
+ │   │    weight_decay          │                                                  │
+ │   │    close_mosaic          │                                                  │
+ │   └──────────────────────────┘                                                  │
+ │                  │                                                              │
+ │                  ▼                                                              │
+ │         ┌────────────────┐                                                      │
+ │         │  train_model   │  ← sends config to GPU server /train                │
+ │         │                │    polls /status/{task_id} until done                │
+ │         │                │    appends {cycle, config, results} to history       │
+ │         └────────────────┘                                                      │
+ │                  │                                                              │
+ │                  ▼                                                              │
+ │         ┌────────────────┐                                                      │
+ │         │    evaluate    │  ← reads mAP50-95 from latest history entry          │
+ │         └────────────────┘                                                      │
+ │                  │                                                              │
+ │       should_continue(state)?                                                   │
+ │         ┌────────┴──────────┐                                                  │
+ │    mAP >= target        cycle < max                                             │
+ │    OR cycle >= max      AND mAP < target                                        │
+ │         │                   │                                                  │
+ │         ▼                   └────────────────────────────► back to plan_model  │
+ │        END                                                (next research cycle) │
+ │                                                                                │
+ └────────────────────────────────────────────────────────────────────────────────┘
+
+ GPU Server  (192.168.x.x:8000)
+ ┌──────────────────────────────────────────────┐
+ │  POST /dataset/analyze  →  dataset_stats      │
+ │  POST /train            →  task_id            │
+ │  GET  /status/{id}      →  {status}           │
+ │  GET  /results/{id}     →  {mAP50-95, mAP50} │
+ └──────────────────────────────────────────────┘
 ```
 
 1. **Ingest (first run only)** — `agent/rag.py` loads `finetune/ultralytics_raw.txt` (14 scraped Ultralytics pages), splits it into ~218 overlapping chunks, embeds them via `OllamaEmbeddings`, and persists the index to `agent/vectorstore/` using ChromaDB.
@@ -127,7 +178,7 @@ In addition to `epochs`, `batch_size`, `imgsz`, and `lr0`, the RAG-informed plan
 
 ### Updating the Documentation Source
 
-The RAG source is `finetune/ultralytics_raw.txt`. To refresh it with updated or additional pages, re-run the scraping cell in `finetune/finetune.ipynb`, then delete `agent/vectorstore/` to force a re-index on the next run:
+The RAG source is `finetune/ultralytics_raw.txt`. To refresh it with updated or additional pages, delete `agent/vectorstore/` to force a re-index on the next run:
 
 ```bash
 rm -rf agent/vectorstore/
