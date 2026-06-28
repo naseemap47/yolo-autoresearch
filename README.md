@@ -12,81 +12,7 @@ Because LLM generation and YOLO training are resource-heavy, the system is desig
 
 ---
 
-## 1. GPU Server Setup (Remote Machine)
-
-This machine handles the YOLO model training. It must have GPU access and the dataset present on its local filesystem.
-
-### Installation
-1. Clone this repository on the GPU machine.
-2. Install the required dependencies:
-   ```bash
-   uv sync
-   ```
-
-### Running the Server
-The server reads `config/settings.yaml` for its host and port. Start it using the provided script:
-```bash
-python run_server.py
-```
-
----
-
-## 2. Agent Orchestrator Setup (Local Machine)
-
-This machine controls the research loop.
-
-### Prerequisites
-1. **Ollama**: Ensure Ollama is installed and running locally.
-2. **Pull LLM Model**: Pull the model you intend to use. The default is `qwen3.5:0.8b`.
-   ```bash
-   ollama pull qwen3.5:0.8b
-   ```
-3. **Pull Embedding Model** (required for RAG): Pull a local embedding model for the RAG retriever.
-   ```bash
-   ollama pull nomic-embed-text
-   ```
-
-### Installation
-1. Clone this repository locally.
-2. Install all dependencies (including ChromaDB for RAG):
-   ```bash
-   uv sync
-   ```
-
-### Configuration
-Edit the `config/settings.yaml` file to match your environment:
-```yaml
-server:
-  host: "192.168.0.84"
-  port: 8000
-
-agent:
-  gpu_host: "192.168.0.84"
-  llm_model: "qwen3.5:0.8b"
-  target_map: 0.8
-  max_cycles: 5
-  dataset_yaml_path: "/path/to/dataset/data.yaml"  # path on the GPU machine
-
-rag:
-  docs_path: "finetune/ultralytics_raw.txt"   # pre-scraped Ultralytics docs
-  persist_dir: "agent/vectorstore"            # ChromaDB index location
-  embedding_model: "nomic-embed-text"         # Ollama embedding model
-  top_k: 4                                    # doc chunks injected per planning step
-  chunk_size: 800
-  chunk_overlap: 100
-```
-**Important:** `dataset_yaml_path` must be the absolute path to `data.yaml` *as it exists on the remote GPU PC*.
-
-### Running the Agent
-```bash
-python -m agent.main
-```
-
-On **first run**, the RAG module will embed and index the Ultralytics documentation (~30 s, one-time). On all subsequent runs the index is loaded instantly from disk.
-
----
-
-## 3. How It Works
+## 1. How It Works
 
 ```
                           LANGGRAPH STATE MACHINE
@@ -166,6 +92,80 @@ On **first run**, the RAG module will embed and index the Ultralytics documentat
 3. **Retrieval (each planning step)** — the planner builds a natural-language query from dataset characteristics (image count, class count) and the last training result (low / medium / high mAP), then retrieves the 4 most relevant documentation excerpts.
 
 4. **Grounded generation** — the LLM prompt includes real Ultralytics documentation covering learning rate schedules, weight decay, `close_mosaic` behaviour, batch size guidance, data augmentation, and overfitting prevention. The LLM must reference these excerpts in its `reasoning` field.
+
+## 2. GPU Server Setup (Remote Machine)
+
+This machine handles the YOLO model training. It must have GPU access and the dataset present on its local filesystem.
+
+### Installation
+1. Clone this repository on the GPU machine.
+2. Install the required dependencies:
+   ```bash
+   uv sync
+   ```
+
+### Running the Server
+The server reads `config/settings.yaml` for its host and port. Start it using the provided script:
+```bash
+python run_server.py
+```
+
+---
+
+## 3. Agent Orchestrator Setup (Local Machine)
+
+This machine controls the research loop.
+
+### Prerequisites
+1. **Ollama**: Ensure Ollama is installed and running locally.
+2. **Pull LLM Model**: Pull the model you intend to use. The default is `qwen3.5:0.8b`.
+   ```bash
+   ollama pull qwen3.5:0.8b
+   ```
+3. **Pull Embedding Model** (required for RAG): Pull a local embedding model for the RAG retriever.
+   ```bash
+   ollama pull nomic-embed-text
+   ```
+
+### Installation
+1. Clone this repository locally.
+2. Install all dependencies (including ChromaDB for RAG):
+   ```bash
+   uv sync
+   ```
+
+### Configuration
+Edit the `config/settings.yaml` file to match your environment:
+```yaml
+server:
+  host: "192.168.0.84"
+  port: 8000
+
+agent:
+  gpu_host: "192.168.0.84"
+  llm_model: "qwen3.5:0.8b"
+  target_map: 0.8
+  max_cycles: 5
+  dataset_yaml_path: "/path/to/dataset/data.yaml"  # path on the GPU machine
+
+rag:
+  docs_path: "finetune/ultralytics_raw.txt"   # pre-scraped Ultralytics docs
+  persist_dir: "agent/vectorstore"            # ChromaDB index location
+  embedding_model: "nomic-embed-text"         # Ollama embedding model
+  top_k: 4                                    # doc chunks injected per planning step
+  chunk_size: 800
+  chunk_overlap: 100
+```
+**Important:** `dataset_yaml_path` must be the absolute path to `data.yaml` *as it exists on the remote GPU PC*.
+
+### Running the Agent
+```bash
+python -m agent.main
+```
+
+On **first run**, the RAG module will embed and index the Ultralytics documentation (~30 s, one-time). On all subsequent runs the index is loaded instantly from disk.
+
+---
 
 ### RAG-Enhanced Hyperparameters
 
