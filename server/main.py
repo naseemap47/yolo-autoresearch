@@ -17,6 +17,8 @@ class TrainRequest(BaseModel):
     batch_size: int = 16
     imgsz: int = 640
     lr0: float = 0.01
+    weight_decay: float = 0.0005
+    close_mosaic: int = 10
 
 @app.post("/dataset/analyze")
 def analyze_dataset(req: AnalyzeRequest):
@@ -35,7 +37,9 @@ def start_training(req: TrainRequest):
         epochs=req.epochs,
         batch_size=req.batch_size,
         imgsz=req.imgsz,
-        lr0=req.lr0
+        lr0=req.lr0,
+        weight_decay=req.weight_decay,
+        close_mosaic=req.close_mosaic,
     )
     return {"task_id": task_id, "status": "started"}
 

@@ -6,7 +6,17 @@ import threading
 # In production, use a database or Redis
 tasks = {}
 
-def train_yolo_async(task_id: str, model_name: str, data_yaml: str, epochs: int, batch_size: int, imgsz: int, lr0: float):
+def train_yolo_async(
+    task_id: str,
+    model_name: str,
+    data_yaml: str,
+    epochs: int,
+    batch_size: int,
+    imgsz: int,
+    lr0: float,
+    weight_decay: float = 0.0005,
+    close_mosaic: int = 10,
+):
     def training_thread():
         try:
             tasks[task_id] = {"status": "training", "progress": "started", "metrics": None, "error": None}
@@ -24,9 +34,11 @@ def train_yolo_async(task_id: str, model_name: str, data_yaml: str, epochs: int,
                 batch=batch_size,
                 imgsz=imgsz,
                 lr0=lr0,
+                weight_decay=weight_decay,
+                close_mosaic=close_mosaic,
                 project="runs/train",
                 name=task_id,
-                device="0", # Assuming GPU 0
+                device="0",
                 exist_ok=True
             )
             

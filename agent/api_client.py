@@ -11,7 +11,17 @@ class GPUClient:
         res.raise_for_status()
         return res.json()
         
-    def start_training(self, model_name: str, data_yaml_path: str, epochs: int, batch_size: int, imgsz: int, lr0: float):
+    def start_training(
+        self,
+        model_name: str,
+        data_yaml_path: str,
+        epochs: int,
+        batch_size: int,
+        imgsz: int,
+        lr0: float,
+        weight_decay: float = 0.0005,
+        close_mosaic: int = 10,
+    ):
         url = f"{self.base_url}/train"
         data = {
             "model_name": model_name,
@@ -19,11 +29,14 @@ class GPUClient:
             "epochs": epochs,
             "batch_size": batch_size,
             "imgsz": imgsz,
-            "lr0": lr0
+            "lr0": lr0,
+            "weight_decay": weight_decay,
+            "close_mosaic": close_mosaic,
         }
         res = requests.post(url, json=data)
         res.raise_for_status()
         return res.json()["task_id"]
+
         
     def check_status(self, task_id: str):
         url = f"{self.base_url}/status/{task_id}"

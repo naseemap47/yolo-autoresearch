@@ -8,3 +8,16 @@ agent:
   target_map: 0.8
   max_cycles: 5
   dataset_yaml_path: "/home/eternalcm/Downloads/Test/data.yaml"
+
+rag:
+  # Path to the pre-scraped Ultralytics documentation text file
+  docs_path: "finetune/ultralytics_raw.txt"
+  # Where ChromaDB will persist the vector index (created on first run)
+  persist_dir: "agent/vectorstore"
+  # Ollama embedding model — run: ollama pull nomic-embed-text
+  embedding_model: "nomic-embed-text"
+  # Number of documentation chunks to inject into each planning prompt
+  top_k: 4
+  # Characters per chunk when splitting the source text
+  chunk_size: 800
+  chunk_overlap: 100

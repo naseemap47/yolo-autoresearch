@@ -2,6 +2,7 @@ import argparse
 import yaml
 import os
 from .graph import create_agent_graph
+from .rag import get_or_build_vectorstore, UltralyticsRetriever
 
 def main():
     parser = argparse.ArgumentParser(description="YOLO Auto-Research Agent")
@@ -26,7 +27,40 @@ def main():
         print("dataset_yaml_path is required in config.")
         return
 
-    agent = create_agent_graph(host=gpu_host, model_name=llm_model)
+    # ------------------------------------------------------------------ #
+    # RAG Initialization                                                   #
+    # ------------------------------------------------------------------ #
+    rag_cfg = config.get("rag", {})
+    retriever = None
+
+    if rag_cfg:
+        docs_path      = rag_cfg.get("docs_path", "finetune/ultralytics_raw.txt")
+        persist_dir    = rag_cfg.get("persist_dir", "agent/vectorstore")
+        embed_model    = rag_cfg.get("embedding_model", "nomic-embed-text")
+        top_k          = rag_cfg.get("top_k", 4)
+        chunk_size     = rag_cfg.get("chunk_size", 800)
+        chunk_overlap  = rag_cfg.get("chunk_overlap", 100)
+
+        try:
+            vectorstore = get_or_build_vectorstore(
+                docs_path=docs_path,
+                persist_dir=persist_dir,
+                embedding_model=embed_model,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
+            retriever = UltralyticsRetriever(vectorstore=vectorstore, top_k=top_k)
+            print(f"[RAG] Ready — top_k={top_k}, embed_model={embed_model}")
+        except Exception as e:
+            print(f"[RAG] WARNING: Could not initialize RAG ({e}). Running without context.")
+            retriever = None
+    else:
+        print("[RAG] No 'rag' section found in config — running without documentation context.")
+
+    # ------------------------------------------------------------------ #
+    # Agent Graph                                                          #
+    # ------------------------------------------------------------------ #
+    agent = create_agent_graph(host=gpu_host, model_name=llm_model, retriever=retriever)
     
     initial_state = {
         "dataset_yaml_path": dataset_yaml_path,
@@ -52,3 +86,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
