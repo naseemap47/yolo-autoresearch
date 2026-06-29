@@ -128,7 +128,7 @@ def _build_rag_query(dataset_stats: dict, history: list) -> str:
 class Planner:
     def __init__(
         self,
-        model_name: str = "qwen3.5:0.8b",
+        model_name: str = "qwen3.5:9b",
         retriever: Optional[object] = None,
     ):
         self.llm = OllamaLLM(model=model_name)

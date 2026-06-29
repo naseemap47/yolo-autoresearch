@@ -118,9 +118,9 @@ This machine controls the research loop.
 
 ### Prerequisites
 1. **Ollama**: Ensure Ollama is installed and running locally.
-2. **Pull LLM Model**: Pull the model you intend to use. The default is `qwen3.5:0.8b`.
+2. **Pull LLM Model**: Pull the model you intend to use. The default is `qwen3.5:9b`.
    ```bash
-   ollama pull qwen3.5:0.8b
+   ollama pull qwen3.5:9b
    ```
 3. **Pull Embedding Model** (required for RAG): Pull a local embedding model for the RAG retriever.
    ```bash
@@ -143,7 +143,7 @@ server:
 
 agent:
   gpu_host: "192.168.0.84"
-  llm_model: "qwen3.5:0.8b"
+  llm_model: "qwen3.5:9b"
   target_map: 0.8
   max_cycles: 5
   dataset_yaml_path: "/path/to/dataset/data.yaml"  # path on the GPU machine
@@ -206,7 +206,7 @@ python -m agent.main
 
 ### 3. ollama._types.ResponseError: model '...' not found (status code: 404)
 **Issue**: The LangGraph agent crashes during the "Planning next model" step with a 404 error from Ollama.
-**Cause**: The LLM model name has not been pulled, or the name is misspelled (e.g., `qwen:3.5-0.8b` instead of `qwen3.5:0.8b`).
+**Cause**: The LLM model name has not been pulled, or the name is misspelled (e.g., `qwen:3.5-9b` instead of `qwen3.5:9b`).
 **Solution**:
 - Run `ollama list` to see the exact names of pulled models.
 - Pull the missing model: `ollama pull <model_name>`.

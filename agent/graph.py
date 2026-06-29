@@ -15,7 +15,7 @@ class AgentState(TypedDict):
 
 def create_agent_graph(
     host: str = "192.168.0.84",
-    model_name: str = "qwen3.5:0.8b",
+    model_name: str = "qwen3.5:9b",
     retriever: Optional[object] = None,
 ):
     client = GPUClient(host=host)
