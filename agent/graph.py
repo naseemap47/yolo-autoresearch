@@ -17,9 +17,10 @@ def create_agent_graph(
     host: str = "192.168.0.84",
     model_name: str = "qwen3.5:9b",
     retriever: Optional[object] = None,
+    target_map: float = 0.8,
 ):
     client = GPUClient(host=host)
-    planner = Planner(model_name=model_name, retriever=retriever)
+    planner = Planner(model_name=model_name, retriever=retriever, target_map=target_map)
     
     def analyze_data(state: AgentState):
         print(f"Cycle {state['current_cycle'] + 1}: Analyzing dataset...")

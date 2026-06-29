@@ -60,7 +60,7 @@ def main():
     # ------------------------------------------------------------------ #
     # Agent Graph                                                          #
     # ------------------------------------------------------------------ #
-    agent = create_agent_graph(host=gpu_host, model_name=llm_model, retriever=retriever)
+    agent = create_agent_graph(host=gpu_host, model_name=llm_model, retriever=retriever, target_map=target_map)
     
     initial_state = {
         "dataset_yaml_path": dataset_yaml_path,
