@@ -38,7 +38,6 @@ def analyze_yolo_dataset(data_yaml_path: str):
         "num_classes": len(data.get('names', [])),
         "class_names": data.get('names', []),
         "total_images": len(image_paths),
-        "sample_size": len(image_paths),
         "average_image_width": 0,
         "average_image_height": 0,
         "bbox_distribution": defaultdict(list),
@@ -48,7 +47,7 @@ def analyze_yolo_dataset(data_yaml_path: str):
     total_w, total_h = 0, 0
     sampled_count = 0
     
-    for img_path in image_paths[:sample_size]:
+    for img_path in image_paths:
         try:
             with Image.open(img_path) as img:
                 w, h = img.size
