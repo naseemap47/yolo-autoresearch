@@ -8,7 +8,6 @@ app = FastAPI(title="YOLO Auto-Research GPU Server")
 
 class AnalyzeRequest(BaseModel):
     data_yaml_path: str
-    sample_size: int = 100
 
 class TrainRequest(BaseModel):
     model_name: str
@@ -22,7 +21,7 @@ class TrainRequest(BaseModel):
 
 @app.post("/dataset/analyze")
 def analyze_dataset(req: AnalyzeRequest):
-    stats = analyze_yolo_dataset(req.data_yaml_path, req.sample_size)
+    stats = analyze_yolo_dataset(req.data_yaml_path)
     if "error" in stats:
         raise HTTPException(status_code=400, detail=stats["error"])
     return stats
