@@ -4,7 +4,7 @@ import glob
 from collections import defaultdict
 from PIL import Image
 
-def analyze_yolo_dataset(data_yaml_path: str, sample_size: int = 100):
+def analyze_yolo_dataset(data_yaml_path: str):
     if not os.path.exists(data_yaml_path):
         return {"error": "Dataset yaml not found."}
         
@@ -33,12 +33,12 @@ def analyze_yolo_dataset(data_yaml_path: str, sample_size: int = 100):
         image_paths = glob.glob(os.path.join(train_path, '**', '*.*'), recursive=True)
         # Filter for images
         image_paths = [p for p in image_paths if p.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        
+
     stats = {
-        "num_classes": data.get('nc', 0),
+        "num_classes": len(data.get('names', [])),
         "class_names": data.get('names', []),
         "total_images": len(image_paths),
-        "sampled_images": 0,
+        "sample_size": len(image_paths),
         "average_image_width": 0,
         "average_image_height": 0,
         "bbox_distribution": defaultdict(list),
