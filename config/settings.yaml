@@ -21,3 +21,9 @@ rag:
   # Characters per chunk when splitting the source text
   chunk_size: 800
   chunk_overlap: 100
+
+mlflow:
+  # URI of the MLflow tracking server — start it with: mlflow ui --port 5000
+  tracking_uri: "http://127.0.0.1:5000"
+  # All research cycles are grouped under this experiment in the UI
+  experiment_name: "yolo-autoresearch"

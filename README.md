@@ -1,14 +1,16 @@
 # YOLO Auto-Research Agentic Framework
 
-> Autonomous YOLO model selection, hyperparameter tuning, and iterative training — powered by LangGraph, Ollama, FastAPI, and RAG.
+> Autonomous YOLO model selection, hyperparameter tuning, and iterative training — powered by LangGraph, Ollama, FastAPI, RAG, and **MLflow**.
 
 This framework uses an LLM-driven agent to automatically analyze YOLO datasets, propose optimal model variants (e.g., `yolov8n.pt`, `yolov8m.pt`) and hyperparameters, and train them repeatedly until a target accuracy (mAP50-95) is reached.
 
 A **RAG (Retrieval-Augmented Generation)** layer grounds the LLM planner in official Ultralytics documentation at every planning step, ensuring hyperparameter decisions reference real documentation rather than hallucinated defaults.
 
+Every research cycle is tracked as a named **MLflow run** inside a single experiment, so you can compare all model variants and their results side-by-side in the MLflow UI without any manual bookkeeping.
+
 Because LLM generation and YOLO training are resource-heavy, the system is designed to run across two nodes:
-1. **Agent Node (Local)**: Runs LLM inference (via Ollama), the RAG retriever (ChromaDB), and the LangGraph orchestrator.
-2. **GPU Node (Remote)**: Runs a FastAPI server that handles dataset analysis and Ultralytics YOLO training.
+1. **Agent Node (Local)**: Runs LLM inference (via Ollama), the RAG retriever (ChromaDB), the LangGraph orchestrator, and logs MLflow runs.
+2. **GPU Node (Remote)**: Runs a FastAPI server that handles dataset analysis and Ultralytics YOLO training, and also logs its own MLflow run per task.
 
 ---
 
@@ -61,6 +63,7 @@ Because LLM generation and YOLO training are resource-heavy, the system is desig
  │         │                │    (automatically halves batch size and retries      │
  │         │                │     if GPU runs out of memory or training fails)     │
  │         │                │    appends {cycle, config, results} to history       │
+ │         │                │    ★ logs MLflow run (params + metrics + tags)       │
  │         └────────────────┘                                                      │
  │                  │                                                              │
  │                  ▼                                                              │
@@ -84,6 +87,19 @@ Because LLM generation and YOLO training are resource-heavy, the system is desig
  │  POST /train            →  task_id            │
  │  GET  /status/{id}      →  {status}           │
  │  GET  /results/{id}     →  {mAP50-95, mAP50} │
+ │  ★ logs MLflow run after each completed task  │
+ └──────────────────────────────────────────────┘
+
+ MLflow Tracking Server  (127.0.0.1:5000)
+ ┌──────────────────────────────────────────────┐
+ │  Experiment: yolo-autoresearch               │
+ │  Run per cycle: cycle-N-<model_name>         │
+ │  Params:  model_name, epochs, batch_size,    │
+ │           imgsz, lr0, weight_decay,          │
+ │           close_mosaic                       │
+ │  Metrics: mAP50_95, mAP50, fitness, cycle   │
+ │  Tags:    model_name, cycle, status,         │
+ │           task_id, source                    │
  └──────────────────────────────────────────────┘
 ```
 
@@ -94,6 +110,8 @@ Because LLM generation and YOLO training are resource-heavy, the system is desig
 3. **Retrieval (each planning step)** — the planner builds a natural-language query from dataset characteristics (image count, class count) and the last training result (low / medium / high mAP), then retrieves the 4 most relevant documentation excerpts.
 
 4. **Grounded generation** — the LLM prompt includes real Ultralytics documentation covering learning rate schedules, weight decay, `close_mosaic` behaviour, batch size guidance, data augmentation, and overfitting prevention. The LLM must reference these excerpts in its `reasoning` field.
+
+5. **MLflow logging** — after every successful training cycle the agent logs a named run to the MLflow tracking server, capturing all hyperparameters, the resulting mAP scores, and metadata tags so any two cycles can be compared in seconds via the UI.
 
 ## 2. GPU Server Setup (Remote Machine)
 
@@ -131,7 +149,7 @@ This machine controls the research loop.
 
 ### Installation
 1. Clone this repository locally.
-2. Install all dependencies (including ChromaDB for RAG):
+2. Install all dependencies (including MLflow, ChromaDB for RAG):
    ```bash
    uv sync
    ```
@@ -157,6 +175,10 @@ rag:
   top_k: 4                                    # doc chunks injected per planning step
   chunk_size: 800
   chunk_overlap: 100
+
+mlflow:
+  tracking_uri: "http://127.0.0.1:5000"       # MLflow server address
+  experiment_name: "yolo-autoresearch"        # experiment name in the UI
 ```
 **Important:** `dataset_yaml_path` must be the absolute path to `data.yaml` *as it exists on the remote GPU PC*.
 
@@ -166,6 +188,67 @@ python -m agent.main
 ```
 
 On **first run**, the RAG module will embed and index the Ultralytics documentation (~30 s, one-time). On all subsequent runs the index is loaded instantly from disk.
+
+---
+
+## 4. MLflow Experiment Tracking
+
+Every training cycle is automatically recorded as a **run** inside the `yolo-autoresearch` MLflow experiment. This gives you a full audit trail of every model variant and hyperparameter combination tried, plus a point-and-click comparison UI.
+
+### What Is Logged
+
+| Category | Fields |
+|---|---|
+| **Parameters** | `model_name`, `epochs`, `batch_size`, `imgsz`, `lr0`, `weight_decay`, `close_mosaic` |
+| **Metrics** | `mAP50_95`, `mAP50`, `fitness`, `cycle` |
+| **Tags** | `model_name`, `cycle`, `task_id`, `source` (`agent_orchestrator` / `gpu_server`), `status` (`success` / `failed`) |
+
+Runs are named `cycle-N-<model_name>` (e.g. `cycle-2-yolov8m`) for instant identification in the UI.
+
+### Starting the MLflow UI
+
+On the **agent / local machine**, open a separate terminal and run:
+
+```bash
+mlflow ui --port 5000
+```
+
+Then open **http://127.0.0.1:5000** in your browser.
+
+> You can also point the server to a shared network location so both the GPU node and agent node write to the same store:
+> ```bash
+> mlflow server --backend-store-uri sqlite:///mlflow.db \
+>               --default-artifact-root ./mlruns \
+>               --host 0.0.0.0 --port 5000
+> ```
+> Then set `tracking_uri: "http://<agent-ip>:5000"` in `settings.yaml` on both machines.
+
+### Comparing Models in the UI
+
+#### Step 1 — Open the Experiment
+Navigate to **http://127.0.0.1:5000**, click **Experiments** in the left sidebar, and select **yolo-autoresearch**. You will see all runs listed in a table with their parameters and metrics at a glance.
+
+#### Step 2 — Select Runs to Compare
+Tick the checkbox next to the runs you want to compare (e.g. cycle-1-yolov8n vs cycle-3-yolov8m), then click the **Compare** button that appears at the top of the table.
+
+#### Step 3 — View the Comparison Views
+
+The MLflow compare page offers three views:
+
+| View | How to use it |
+|---|---|
+| **Parallel Coordinates** | Each vertical axis is one parameter or metric. Drag the `mAP50_95` axis to the right end to see which parameter combinations produced the best mAP. Lines that reach a high mAP value on the right reveal winning configurations. |
+| **Scatter Plot** | Select any two columns (e.g. `lr0` vs `mAP50_95`) to see correlation. Useful for spotting if a lower/higher learning rate consistently helps. |
+| **Box Plot / Table** | Switch to the **Table** tab for a raw side-by-side view of every logged value. Sort by `mAP50_95` descending to rank models instantly. |
+
+#### Step 4 — Drill into a Run
+Click any run name to see its full detail page: parameters, metrics over time (if `step` logging is used), artifacts, and tags. The `task_id` tag links back to the GPU server log for that specific training job.
+
+#### Tips
+- **Filter by tag**: In the experiment view, use the search bar (`tags.model_name = "yolov8m.pt"`) to filter to a specific architecture.
+- **Sort by metric**: Click the `mAP50_95` column header to sort all runs by accuracy instantly.
+- **Download CSV**: Use **Download CSV** (top right of the runs table) to export all run data for offline analysis.
+- **Failed runs**: Runs tagged `status=failed` appear in the list with no metrics — useful to see which configurations caused OOM errors.
 
 ---
 
@@ -238,3 +321,19 @@ python -m agent.main
 - Pull the embedding model: `ollama pull nomic-embed-text`
 - Verify the docs file exists: `ls finetune/ultralytics_raw.txt`
 - If the file is missing, run the scraping cell in `finetune/finetune.ipynb`
+
+### 6. MLflow runs not appearing in the UI
+**Issue**: The agent finishes but no runs show up at `http://127.0.0.1:5000`.
+**Cause**: The MLflow tracking server is not running, or the `tracking_uri` in `settings.yaml` points to the wrong address.
+**Solution**:
+- Start the server **before** running the agent: `mlflow ui --port 5000`
+- Confirm the URI in `config/settings.yaml → mlflow.tracking_uri` matches exactly.
+- If the server is on a different machine, replace `127.0.0.1` with that machine's IP and ensure port 5000 is open in the firewall:
+  ```bash
+  sudo ufw allow 5000/tcp
+  ```
+
+### 7. mlflow.exceptions.MlflowException: Could not find experiment
+**Issue**: The agent errors with an experiment-not-found message on first run.
+**Cause**: Harmless — MLflow creates the experiment automatically on the first `mlflow.set_experiment()` call. If you see this error, the tracking server may not have been reachable at that moment.
+**Solution**: Confirm the tracking server is running and retry. The experiment will be created on the next run.
