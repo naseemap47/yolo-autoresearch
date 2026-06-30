@@ -333,7 +333,19 @@ python -m agent.main
   sudo ufw allow 5000/tcp
   ```
 
-### 7. mlflow.exceptions.MlflowException: Could not find experiment
+### 7. Agent stops after "documentation context enabled" — never prints "Starting YOLO Auto-Research Agent..."
+**Issue**: The agent initializes RAG successfully but then hangs silently or exits without reaching the startup banner.
+**Cause**: `mlflow.set_experiment()` is called inside `create_agent_graph()` and makes a live HTTP call to the tracking server. If `mlflow ui` is not running yet, this call raises a `ConnectionRefusedError` that was previously uncaught, killing the process before the agent loop started.
+**Solution** (already patched): The graph now wraps the MLflow setup in a `try/except` and prints a warning, then continues without tracking if the server is unreachable. To enable tracking, start the server **before** running the agent:
+```bash
+# Terminal 1
+mlflow ui --port 5000
+
+# Terminal 2
+python -m agent.main
+```
+
+### 8. mlflow.exceptions.MlflowException: Could not find experiment
 **Issue**: The agent errors with an experiment-not-found message on first run.
 **Cause**: Harmless — MLflow creates the experiment automatically on the first `mlflow.set_experiment()` call. If you see this error, the tracking server may not have been reachable at that moment.
 **Solution**: Confirm the tracking server is running and retry. The experiment will be created on the next run.

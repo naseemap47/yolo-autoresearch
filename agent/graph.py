@@ -27,7 +27,7 @@ def create_agent_graph(
     planner = Planner(model_name=model_name, retriever=retriever, target_map=target_map)
 
     # ------------------------------------------------------------------ #
-    # MLflow setup                                                         #
+    # MLflow setup (non-fatal — agent continues even if server is down)   #
     # ------------------------------------------------------------------ #
     mlflow_cfg = mlflow_cfg or {}
     tracking_uri    = mlflow_cfg.get("tracking_uri", "http://127.0.0.1:5000")
@@ -35,8 +35,14 @@ def create_agent_graph(
     mlflow_enabled  = bool(mlflow_cfg)
 
     if mlflow_enabled:
-        mlflow.set_tracking_uri(tracking_uri)
-        mlflow.set_experiment(experiment_name)
+        try:
+            mlflow.set_tracking_uri(tracking_uri)
+            mlflow.set_experiment(experiment_name)
+            print(f"[MLflow] Connected — experiment '{experiment_name}' at {tracking_uri}")
+        except Exception as mlflow_init_err:
+            print(f"[MLflow] WARNING: Could not connect to tracking server ({mlflow_init_err}). "
+                  f"Running without experiment tracking. Start the server with: mlflow ui --port 5000")
+            mlflow_enabled = False
 
     def analyze_data(state: AgentState):
         print(f"Cycle {state['current_cycle'] + 1}: Analyzing dataset...")
