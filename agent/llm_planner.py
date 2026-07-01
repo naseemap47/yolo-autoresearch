@@ -109,15 +109,17 @@ class Planner:
             config = json.loads(result)
             return config
         except Exception:
-            print(f"Failed to parse LLM response: {result}")
-            return {
-                "model_name": "yolov8n.pt",
-                "epochs": 10,
-                "batch_size": 16,
-                "imgsz": 640,
-                "lr0": 0.01,
-                "weight_decay": 0.0005,
-                "close_mosaic": 10,
-                "reasoning": "Fallback configuration due to JSON parsing error.",
-            }
+            print(f"[Planner] Failed to parse LLM response: {result}")
+            print("[INFO] Might be due to LLM memory issue!\nUpgrade to higher model")
+            raise Exception("[Planner] Failed to parse LLM response.")
+            # return {
+            #     "model_name": "yolov8n.pt",
+            #     "epochs": 10,
+            #     "batch_size": 16,
+            #     "imgsz": 640,
+            #     "lr0": 0.01,
+            #     "weight_decay": 0.0005,
+            #     "close_mosaic": 10,
+            #     "reasoning": "Fallback configuration due to JSON parsing error.",
+            # }
 

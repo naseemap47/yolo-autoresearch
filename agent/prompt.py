@@ -97,7 +97,6 @@ Train Settings:
   - single_cls      : (default: False) Treats all classes in multi-class datasets as a single class during training. Useful for binary classification tasks or when focusing on object presence rather than classification.
   - multi_scale     : (default: 0.0) Randomly vary imgsz each batch by +/- multi_scale (e.g. 0.25 -> 0.75x to 1.25x), rounding to model stride multiples; 0.0 disables multi-scale training.
   - cos_lr          : (default: False) Utilizes a cosine learning rate scheduler, adjusting the learning rate following a cosine curve over epochs. Helps in managing learning rate for better convergence.
-  - close_mosaic    : (default: 10) Disables mosaic data augmentation in the last N epochs to stabilize training before completion. Setting to 0 disables this feature.
   - amp             : (default: True) Enables Automatic Mixed Precision (AMP) training, reducing memory usage and possibly speeding up training with minimal impact on accuracy.
   - freeze          : (default: 0) The freeze parameter accepts either an integer or a list. An integer freeze=10 freezes the first 10 layers (indices 0-9), which covers most of the YOLO26 backbone. The backbone spans layers 0-10, so freeze=10 leaves the final C2PSA block (layer 10) trainable; use freeze=11 to freeze the entire backbone. A list can contain layer indices like freeze=[0, 3, 5] for partial backbone freezing, or module name strings like freeze=["23.cv2", "23.one2one_cv2"] for fine-grained control over specific branches within a layer (here, both box regression branches of the detection head).
   - lrf             : (default: 0.01) Final learning rate as a fraction of the initial rate = (lr0 * lrf), used in conjunction with schedulers to adjust the learning rate over time.
@@ -145,12 +144,45 @@ OOM Auto-Retry: If a CUDA out-of-memory error occurs during the first epoch, the
 Respond ONLY with a valid JSON object in the following format:
 {{
   "model_name": "yolov8n.pt",
-  "epochs": 10,
+
+  "epochs": 50,
   "batch_size": 16,
   "imgsz": 640,
+  "optimizer": "auto",
   "lr0": 0.01,
+  "lrf": 0.01,
+  "momentum": 0.937,
   "weight_decay": 0.0005,
+  "warmup_epochs": 3.0,
+  "warmup_momentum": 0.8,
+  "warmup_bias_lr": 0.1,
+  "cos_lr": false,
   "close_mosaic": 10,
+  "amp": true,
+  "patience": 20,
+  "single_cls": false,
+  "multi_scale": 0.0,
+  "freeze": 0,
+  "dropout": 0.0,
+  "box": 7.5,
+  "cls": 0.5,
+  "dfl": 1.5,
+
+  "hsv_h": 0.015,
+  "hsv_s": 0.7,
+  "hsv_v": 0.4,
+  "degrees": 0.0,
+  "translate": 0.1,
+  "scale": 0.5,
+  "shear": 0.0,
+  "perspective": 0.0,
+  "flipud": 0.0,
+  "fliplr": 0.5,
+  "bgr": 0.0,
+  "mosaic": 1.0,
+  "mixup": 0.0,
+  "cutmix": 0.0,
+
   "reasoning": "Brief explanation referencing the docs above."
 }}
 
