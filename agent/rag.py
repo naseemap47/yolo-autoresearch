@@ -39,7 +39,16 @@ def load_ultralytics_docs():
         "https://docs.ultralytics.com/guides/hyperparameter-tuning",
         "https://docs.ultralytics.com/usage/cfg",
         "https://github.com/ultralytics/ultralytics/issues/7749",
-        "https://github.com/orgs/ultralytics/discussions/9536"
+        "https://github.com/orgs/ultralytics/discussions/9536",
+        "https://medium.com/internet-of-technology/yolov8-best-practices-for-training-cdb6eacf7e4f",
+        "https://docs.ultralytics.com/guides/model-training-tips#how-can-i-use-pretrained-weights-to-speed-up-training-in-yolo26",
+        "https://docs.ultralytics.com/yolov5/tutorials/tips-for-best-training-results#dataset",
+        "https://clarion.ai/10-tips-to-train-deep-learning-model-using-yolo/",
+        "https://keylabs.ai/blog/training-yolov8-models-tips-for-success/",
+        "https://github.com/orgs/ultralytics/discussions/2799",
+        "https://github.com/orgs/ultralytics/discussions/24292",
+        "https://github.com/ultralytics/yolov5/discussions/9198",
+        "https://sodevelopment.medium.com/top-5-tips-for-training-yolo-mastering-object-detection-with-confidence-463e54b2a7a7",
     ]
 
     scraped_data = []
