@@ -3311,7 +3311,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.34.2" },
-    { name = "ultralytics", specifier = ">=8.4.78" },
+    { name = "ultralytics", specifier = "==8.4.78" },
     { name = "uvicorn", specifier = ">=0.49.0" },
 ]
 
