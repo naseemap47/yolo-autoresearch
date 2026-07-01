@@ -49,6 +49,10 @@ def load_ultralytics_docs():
         "https://github.com/orgs/ultralytics/discussions/24292",
         "https://github.com/ultralytics/yolov5/discussions/9198",
         "https://sodevelopment.medium.com/top-5-tips-for-training-yolo-mastering-object-detection-with-confidence-463e54b2a7a7",
+        "https://docs.ultralytics.com/yolov5/tutorials/transfer-learning-with-frozen-layers#before-you-start",
+        "https://docs.ultralytics.com/guides/finetuning-guide#fine-tuning-vs-training-from-scratch",
+        "https://www.ultralytics.com/glossary/regularization#core-concepts-and-techniques",
+        
     ]
 
     scraped_data = []
