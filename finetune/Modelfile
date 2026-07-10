@@ -1,0 +1,19 @@
+# Point to your newly generated GGUF file
+FROM ./qwen3.5_q8.gguf
+
+# Set Qwen's native ChatML template format so it understands system/user prompt tags
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+"""
+
+# Set your default runtime parameters
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER stop "<|im_start|>"
+PARAMETER stop "<|im_end|>"
+
+# Optional: Give your model a default personality or instructions
+SYSTEM """You are a helpful AI assistant fine-tuned for a yolo training research task."""
