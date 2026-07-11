@@ -5,3 +5,4 @@
 llama.cpp/
 qwen3.5_lora_adapter/
 qwen3.5_lora_finetuning/
+*.gguf
