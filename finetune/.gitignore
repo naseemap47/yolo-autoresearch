@@ -1,4 +1,5 @@
-# finetune.ipynb
-ultralytics_raw.txt
-social_posts.md
-ultralytics_dataset.jsonl
+*.ipynb
+*.txt
+*.jsonl
+.env
+llama.cpp/
