@@ -88,9 +88,9 @@ def final_polish(text):
     
     return text
 
-def process_web_content():
+def process_web_content(yaml_path: str = "../config/settings.yaml"):
     # Load Configuration from YAML File
-    with open("../config/settings.yaml", 'r') as f:
+    with open(yaml_path, 'r') as f:
         config = yaml.safe_load(f)
     print(f"Configuration loaded URLs: {config['urls']}")
 

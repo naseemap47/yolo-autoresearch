@@ -13,6 +13,8 @@ from typing import List
 import requests
 from bs4 import BeautifulSoup
 import re
+from agent.constants import CONFIG_PATH
+from finetune.utils import process_web_content
 
 logger = logging.getLogger(__name__)
 
@@ -21,55 +23,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def load_ultralytics_docs(docs_path: str = "finetune/ultralytics_raw.txt"):
-    urls = [
-        "https://docs.ultralytics.com/modes/train#introduction", 
-        "https://www.ultralytics.com/glossary/epoch#the-role-of-epochs-in-optimization",
-        "https://www.ultralytics.com/glossary/overfitting",
-        "https://www.ultralytics.com/glossary/batch-size",
-        "https://www.ultralytics.com/glossary/accuracy",
-        "https://www.ultralytics.com/glossary/learning-rate",
-        "https://www.ultralytics.com/glossary/data-augmentation",
-        "https://www.ultralytics.com/glossary/mixed-precision",
-        "https://www.ultralytics.com/glossary/transfer-learning",
-        "https://www.ultralytics.com/glossary/adam-optimizer",
-        "https://www.ultralytics.com/glossary/regularization",
-        "https://www.ultralytics.com/glossary/loss-function#the-role-of-loss-in-model-training",
-        "https://www.ultralytics.com/glossary/bounding-box",
-        "https://docs.ultralytics.com/guides/yolo-data-augmentation",
-        "https://docs.ultralytics.com/guides/hyperparameter-tuning",
-        "https://docs.ultralytics.com/usage/cfg",
-        "https://github.com/ultralytics/ultralytics/issues/7749",
-        "https://github.com/orgs/ultralytics/discussions/9536",
-        "https://medium.com/internet-of-technology/yolov8-best-practices-for-training-cdb6eacf7e4f",
-        "https://docs.ultralytics.com/guides/model-training-tips#how-can-i-use-pretrained-weights-to-speed-up-training-in-yolo26",
-        "https://docs.ultralytics.com/yolov5/tutorials/tips-for-best-training-results#dataset",
-        "https://clarion.ai/10-tips-to-train-deep-learning-model-using-yolo/",
-        "https://keylabs.ai/blog/training-yolov8-models-tips-for-success/",
-        "https://github.com/orgs/ultralytics/discussions/2799",
-        "https://github.com/orgs/ultralytics/discussions/24292",
-        "https://github.com/ultralytics/yolov5/discussions/9198",
-        "https://sodevelopment.medium.com/top-5-tips-for-training-yolo-mastering-object-detection-with-confidence-463e54b2a7a7",
-        "https://docs.ultralytics.com/yolov5/tutorials/transfer-learning-with-frozen-layers#before-you-start",
-        "https://docs.ultralytics.com/guides/finetuning-guide#fine-tuning-vs-training-from-scratch",
-        "https://www.ultralytics.com/glossary/regularization#core-concepts-and-techniques",
-        
-    ]
-
-    scraped_data = []
-
-    for url in urls:
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Target the main article body on MKDocs/Material-based documentation
-            main_content = soup.find('article') or soup.find('main')
-            if main_content:
-                # Clean up the text
-                text = main_content.get_text(separator='\n', strip=True)
-                # Remove excessive newlines
-                text = re.sub(r'\n+', '\n', text)
-                scraped_data.append(text)
+    
+    scraped_data = process_web_content(CONFIG_PATH)
 
     # Save raw text chunks for the next step
     with open(docs_path, "w", encoding="utf-8") as f:
