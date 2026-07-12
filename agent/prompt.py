@@ -156,6 +156,7 @@ Respond ONLY with a valid JSON object in the following format:
   "warmup_epochs": 3.0,
   "warmup_momentum": 0.8,
   "warmup_bias_lr": 0.1,
+  "distill_model": "yolov8l.pt",
   "cos_lr": false,
   "close_mosaic": 10,
   "amp": true,

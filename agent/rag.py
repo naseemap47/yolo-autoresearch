@@ -10,9 +10,6 @@ planner's prompt as grounding context.
 import os
 import logging
 from typing import List
-import requests
-from bs4 import BeautifulSoup
-import re
 from agent.constants import CONFIG_PATH
 from finetune.utils import process_web_content
 
