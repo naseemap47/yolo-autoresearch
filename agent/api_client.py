@@ -5,9 +5,9 @@ class GPUClient:
     def __init__(self, host: str = "192.168.0.84", port: int = 8000):
         self.base_url = f"http://{host}:{port}"
         
-    def analyze_dataset(self, data_yaml_path: str, sample_size: int = 100):
+    def analyze_dataset(self, data_yaml_path: str):
         url = f"{self.base_url}/dataset/analyze"
-        res = requests.post(url, json={"data_yaml_path": data_yaml_path, "sample_size": sample_size})
+        res = requests.post(url, json={"data_yaml_path": data_yaml_path})
         res.raise_for_status()
         return res.json()
         
