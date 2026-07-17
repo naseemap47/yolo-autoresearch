@@ -24,7 +24,7 @@ class TrainRequest(BaseModel):
     warmup_epochs: float = 3.0
     warmup_momentum: float = 0.8
     warmup_bias_lr: float = 0.1
-    distill_model: str = None,
+    # distill_model: str = None,
     cos_lr: bool = False
     close_mosaic: int = 10
     amp: bool = True
@@ -77,7 +77,7 @@ def start_training(req: TrainRequest):
         warmup_epochs=req.warmup_epochs,
         warmup_momentum=req.warmup_momentum,
         warmup_bias_lr=req.warmup_bias_lr,
-        distill_model=req.distill_model,
+        # distill_model=req.distill_model,
         cos_lr=req.cos_lr,
         close_mosaic=req.close_mosaic,
         amp=req.amp,

@@ -58,7 +58,7 @@ def create_agent_graph(
                     warmup_epochs=config.get("warmup_epochs", 3.0),
                     warmup_momentum=config.get("warmup_momentum", 0.8),
                     warmup_bias_lr=config.get("warmup_bias_lr", 0.1),
-                    distill_model=config.get("distill_model", None),
+                    # distill_model=config.get("distill_model", None),
                     cos_lr=config.get("cos_lr", False),
                     close_mosaic=config.get("close_mosaic", 10),
                     amp=config.get("amp", True),

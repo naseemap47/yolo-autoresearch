@@ -32,7 +32,6 @@ A research system analyzes this information and outputs the optimal model config
 - cos_lr: True to use cosine learning rate scheduler.
 - amp: True to enable Automatic Mixed Precision.
 - patience: Early stopping patience epochs (e.g. 20).
-- distill_model: Path to a teacher model checkpoint (e.g. "yolov8l.pt") for knowledge distillation.
 
 ### Key Augmentation Settings:
 - hsv_h, hsv_s, hsv_v: HSV color space augmentations.
@@ -117,7 +116,6 @@ A research system analyzes this information and outputs the optimal model config
   "warmup_epochs": 3.0,
   "warmup_momentum": 0.8,
   "warmup_bias_lr": 0.1,
-  "distill_model": "",
   "cos_lr": false,
   "close_mosaic": 15,
   "amp": true,
