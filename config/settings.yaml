@@ -4,7 +4,7 @@ server:
 
 agent:
   gpu_host: "192.168.0.84"
-  llm_model: "qwen3.5:9b"
+  llm_model: "naseemap47/qwen3.5-4b-yolo:v1"
   target_map: 0.8
   max_cycles: 5
   dataset_yaml_path: "/home/eternalcm/Downloads/Test/data.yaml"
