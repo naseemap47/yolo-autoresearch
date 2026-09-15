@@ -18,7 +18,7 @@ def main():
 
     agent_cfg = config.get("agent", {})
     gpu_host = agent_cfg.get("gpu_host", "192.168.0.84")
-    llm_model = agent_cfg.get("llm_model", "qwen3.5:0.8b")
+    llm_model = agent_cfg.get("llm_model", "qwen3.5:9b")
     target_map = agent_cfg.get("target_map", 0.8)
     max_cycles = agent_cfg.get("max_cycles", 5)
     dataset_yaml_path = agent_cfg.get("dataset_yaml_path")
@@ -60,7 +60,7 @@ def main():
     # ------------------------------------------------------------------ #
     # Agent Graph                                                          #
     # ------------------------------------------------------------------ #
-    agent = create_agent_graph(host=gpu_host, model_name=llm_model, retriever=retriever)
+    agent = create_agent_graph(host=gpu_host, model_name=llm_model, retriever=retriever, target_map=target_map)
     
     initial_state = {
         "dataset_yaml_path": dataset_yaml_path,

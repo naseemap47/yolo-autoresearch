@@ -36,6 +36,10 @@ def load_ultralytics_docs():
         "https://www.ultralytics.com/glossary/loss-function#the-role-of-loss-in-model-training",
         "https://www.ultralytics.com/glossary/bounding-box",
         "https://docs.ultralytics.com/guides/yolo-data-augmentation",
+        "https://docs.ultralytics.com/guides/hyperparameter-tuning",
+        "https://docs.ultralytics.com/usage/cfg",
+        "https://github.com/ultralytics/ultralytics/issues/7749",
+        "https://github.com/orgs/ultralytics/discussions/9536"
     ]
 
     scraped_data = []
@@ -174,7 +178,7 @@ def load_vectorstore(
     """
     try:
         from langchain_ollama import OllamaEmbeddings
-        from langchain_community.vectorstores import Chroma
+        from langchain_chroma import Chroma
     except ImportError as e:
         raise ImportError(
             f"Missing dependency: {e}. "
