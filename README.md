@@ -58,6 +58,8 @@ Because LLM generation and YOLO training are resource-heavy, the system is desig
  │         ┌────────────────┐                                                      │
  │         │  train_model   │  ← sends config to GPU server /train                │
  │         │                │    polls /status/{task_id} until done                │
+ │         │                │    (automatically halves batch size and retries      │
+ │         │                │     if GPU runs out of memory or training fails)     │
  │         │                │    appends {cycle, config, results} to history       │
  │         └────────────────┘                                                      │
  │                  │                                                              │
@@ -166,6 +168,18 @@ python -m agent.main
 On **first run**, the RAG module will embed and index the Ultralytics documentation (~30 s, one-time). On all subsequent runs the index is loaded instantly from disk.
 
 ---
+
+### Dynamic Target mAP & Model Variety
+
+- **Dynamic Target mAP**: The target accuracy (mAP50-95) is loaded dynamically from `config/settings.yaml` under `agent.target_map` and passed directly into the planning prompt template.
+- **Diverse Model Architectures & Sizes**: The planner has access to a comprehensive table of modern YOLO variants (including YOLO26, YOLO12, YOLO11, YOLOv10, YOLOv9, YOLOv8, YOLOv5, YOLOv7, YOLOv6, YOLOv3, YOLOv4, YOLO-World, YOLOE, and RT-DETR) across multiple size categories (nano, small, medium, large, xlarge).
+
+### Automatic Batch Size Reduction
+
+To handle resource constraints on the remote GPU server, the agent automatically catches training failures (such as PyTorch CUDA Out Of Memory errors or connection resets due to crashes):
+1. If training fails, the agent automatically halves the requested batch size (e.g., from 16 to 8, down to a minimum of 1).
+2. It waits 5 seconds and resubmits the training request with the reduced batch size.
+3. If training still fails even at `batch_size = 1`, the agent aborts execution and reports the original reason of the error.
 
 ### RAG-Enhanced Hyperparameters
 

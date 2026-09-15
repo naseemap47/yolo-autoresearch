@@ -37,36 +37,63 @@ def create_agent_graph(
         return state
 
     def train_model(state: AgentState):
-        print(f"Cycle {state['current_cycle'] + 1}: Sending training request...")
         config = state["current_config"]
-        task_id = client.start_training(
-            model_name=config.get("model_name", "yolov8n.pt"),
-            data_yaml_path=state["dataset_yaml_path"],
-            epochs=config.get("epochs", 10),
-            batch_size=config.get("batch_size", 16),
-            imgsz=config.get("imgsz", 640),
-            lr0=config.get("lr0", 0.01),
-            weight_decay=config.get("weight_decay", 0.0005),
-            close_mosaic=config.get("close_mosaic", 10),
-        )
-        print(f"Training started with task ID: {task_id}")
-        
-        # Wait for training
-        results = client.wait_for_training(task_id, poll_interval=10)
-        print(f"Training results: {results}")
-        
-        # Save to history
-        record = {
-            "cycle": state["current_cycle"] + 1,
-            "config": config,
-            "results": results
-        }
-        state["history"].append(record)
-        state["current_cycle"] += 1
-        return state
+        batch_size = config.get("batch_size", 16)
+        last_error = None
+
+        while True:
+            print(f"Cycle {state['current_cycle'] + 1}: Sending training request (batch_size={batch_size})...")
+            try:
+                task_id = client.start_training(
+                    model_name=config.get("model_name", "yolov8n.pt"),
+                    data_yaml_path=state["dataset_yaml_path"],
+                    epochs=config.get("epochs", 10),
+                    batch_size=batch_size,
+                    imgsz=config.get("imgsz", 640),
+                    lr0=config.get("lr0", 0.01),
+                    weight_decay=config.get("weight_decay", 0.0005),
+                    close_mosaic=config.get("close_mosaic", 10),
+                )
+                print(f"Training started with task ID: {task_id}")
+                
+                # Wait for training
+                results = client.wait_for_training(task_id, poll_interval=10)
+                print(f"Training results: {results}")
+                
+                # Update config with the batch size that actually succeeded
+                config["batch_size"] = batch_size
+                state["current_config"] = config
+                
+                # Save to history
+                record = {
+                    "cycle": state["current_cycle"] + 1,
+                    "config": config,
+                    "results": results
+                }
+                state["history"].append(record)
+                state["current_cycle"] += 1
+                return state
+
+            except Exception as e:
+                last_error = e
+                print(f"Training failed or connection error: {e}")
+                
+                if batch_size > 1:
+                    new_batch_size = max(1, batch_size // 2)
+                    print(f"Reducing batch size from {batch_size} to {new_batch_size} and retrying...")
+                    batch_size = new_batch_size
+                    import time
+                    time.sleep(5)
+                    continue
+                else:
+                    print("Batch size is already 1. Cannot reduce further.")
+                    state["final_result"] = f"Training failed even with batch_size=1. Reason: {last_error}"
+                    return state
 
     def evaluate(state: AgentState):
         print("Evaluating results...")
+        if state.get("final_result"):
+            return state
         latest_results = state["history"][-1]["results"]
         map50_95 = latest_results.get("mAP50-95", 0)
         
