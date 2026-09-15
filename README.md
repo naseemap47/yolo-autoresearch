@@ -1,12 +1,14 @@
 # YOLO Auto-Research Agentic Framework
 
-> Autonomous YOLO model selection, hyperparameter tuning, and iterative training — powered by LangGraph, Ollama, and FastAPI.
+> Autonomous YOLO model selection, hyperparameter tuning, and iterative training — powered by LangGraph, Ollama, FastAPI, and RAG.
 
-This framework uses an LLM-driven agent to automatically analyze YOLO datasets, propose optimal model variants (e.g., `yolov8n.pt`, `yolov8m.pt`) and hyperparameters, and train them repeatedly until a target accuracy (mAP50-95) is reached. 
+This framework uses an LLM-driven agent to automatically analyze YOLO datasets, propose optimal model variants (e.g., `yolov8n.pt`, `yolov8m.pt`) and hyperparameters, and train them repeatedly until a target accuracy (mAP50-95) is reached.
+
+A **RAG (Retrieval-Augmented Generation)** layer grounds the LLM planner in official Ultralytics documentation at every planning step, ensuring hyperparameter decisions reference real documentation rather than hallucinated defaults.
 
 Because LLM generation and YOLO training are resource-heavy, the system is designed to run across two nodes:
-1. **Agent Node (Local)**: Runs the LLM inference (via Ollama) and LangGraph orchestrator.
-2. **GPU Node (Remote)**: Runs a FastAPI server that handles heavy dataset analysis and Ultralytics YOLO training.
+1. **Agent Node (Local)**: Runs LLM inference (via Ollama), the RAG retriever (ChromaDB), and the LangGraph orchestrator.
+2. **GPU Node (Remote)**: Runs a FastAPI server that handles dataset analysis and Ultralytics YOLO training.
 
 ---
 
@@ -39,10 +41,14 @@ This machine controls the research loop.
    ```bash
    ollama pull qwen3.5:0.8b
    ```
+3. **Pull Embedding Model** (required for RAG): Pull a local embedding model for the RAG retriever.
+   ```bash
+   ollama pull nomic-embed-text
+   ```
 
 ### Installation
 1. Clone this repository locally.
-2. Install the required dependencies:
+2. Install all dependencies (including ChromaDB for RAG):
    ```bash
    uv sync
    ```
@@ -59,22 +65,78 @@ agent:
   llm_model: "qwen3.5:0.8b"
   target_map: 0.8
   max_cycles: 5
-  dataset_yaml_path: "/home/eternalcm/Downloads/Test/data.yaml"
+  dataset_yaml_path: "/path/to/dataset/data.yaml"  # path on the GPU machine
+
+rag:
+  docs_path: "finetune/ultralytics_raw.txt"   # pre-scraped Ultralytics docs
+  persist_dir: "agent/vectorstore"            # ChromaDB index location
+  embedding_model: "nomic-embed-text"         # Ollama embedding model
+  top_k: 4                                    # doc chunks injected per planning step
+  chunk_size: 800
+  chunk_overlap: 100
 ```
 **Important:** `dataset_yaml_path` must be the absolute path to `data.yaml` *as it exists on the remote GPU PC*.
 
 ### Running the Agent
-Start the auto-research agent. It will automatically load your configuration from `config/settings.yaml`:
+```bash
+python -m agent.main
+```
+
+On **first run**, the RAG module will embed and index the Ultralytics documentation (~30 s, one-time). On all subsequent runs the index is loaded instantly from disk.
+
+---
+
+## 3. RAG Integration
+
+### How It Works
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Agent Planning Cycle                   │
+│                                                           │
+│  dataset_stats + training history                         │
+│         │                                                 │
+│         ▼                                                 │
+│  ┌─────────────┐   semantic query   ┌─────────────────┐  │
+│  │   Planner   │ ─────────────────► │ UltralyticsRAG  │  │
+│  │  (Qwen LLM) │ ◄───────────────── │  (ChromaDB)     │  │
+│  └─────────────┘   top-k doc chunks └─────────────────┘  │
+│         │                                    ▲            │
+│         │  JSON config                       │            │
+│         ▼                            finetune/            │
+│   train_model(...)              ultralytics_raw.txt       │
+└──────────────────────────────────────────────────────────┘
+```
+
+1. **Ingest (first run only)** — `agent/rag.py` loads `finetune/ultralytics_raw.txt` (14 scraped Ultralytics pages), splits it into ~218 overlapping chunks, embeds them via `OllamaEmbeddings`, and persists the index to `agent/vectorstore/` using ChromaDB.
+
+2. **Load (subsequent runs)** — the persisted ChromaDB index is loaded instantly from disk. No re-embedding required.
+
+3. **Retrieval (each planning step)** — the planner builds a natural-language query from dataset characteristics (image count, class count) and the last training result (low / medium / high mAP), then retrieves the 4 most relevant documentation excerpts.
+
+4. **Grounded generation** — the LLM prompt includes real Ultralytics documentation covering learning rate schedules, weight decay, `close_mosaic` behaviour, batch size guidance, data augmentation, and overfitting prevention. The LLM must reference these excerpts in its `reasoning` field.
+
+### RAG-Enhanced Hyperparameters
+
+In addition to `epochs`, `batch_size`, `imgsz`, and `lr0`, the RAG-informed planner also tunes:
+
+| Parameter | Description | Tuning Range |
+|---|---|---|
+| `weight_decay` | L2 regularization to prevent overfitting | `0.0001 – 0.001` |
+| `close_mosaic` | Epochs before end to disable mosaic augmentation | `0 – 15` |
+
+### Updating the Documentation Source
+
+The RAG source is `finetune/ultralytics_raw.txt`. To refresh it with updated or additional pages, re-run the scraping cell in `finetune/finetune.ipynb`, then delete `agent/vectorstore/` to force a re-index on the next run:
 
 ```bash
+rm -rf agent/vectorstore/
 python -m agent.main
 ```
 
 ---
 
 ## Troubleshooting & Common Errors
-
-Here are common issues you might encounter during setup and how to resolve them:
 
 ### 1. Agent Hangs on "Cycle 1: Analyzing dataset..."
 **Issue**: The agent gets stuck trying to send the initial request and eventually throws a timeout or `urllib3` connection error.
@@ -88,17 +150,26 @@ Here are common issues you might encounter during setup and how to resolve them:
 
 ### 2. HTTPError: 400 Client Error: Bad Request for url: .../dataset/analyze
 **Issue**: The FastAPI server returns `{"detail":"Dataset yaml not found."}`.
-**Cause**: The path you provided to the `--data` flag does not exist *on the remote GPU machine*.
-**Solution**: Double-check the absolute path of the dataset on the GPU machine. The path provided to the agent must correspond exactly to where the file is located on the remote server's filesystem, not your local machine.
+**Cause**: The path you provided does not exist *on the remote GPU machine*.
+**Solution**: Double-check the absolute path of the dataset on the GPU machine. The path must correspond exactly to where the file is located on the remote server's filesystem, not your local machine.
 
 ### 3. ollama._types.ResponseError: model '...' not found (status code: 404)
 **Issue**: The LangGraph agent crashes during the "Planning next model" step with a 404 error from Ollama.
-**Cause**: The LLM model name specified (either in the code or via `--llm`) has not been downloaded to your local Ollama registry, or the name is misspelled (e.g., `qwen:3.5-0.8b` instead of `qwen3.5:0.8b`).
-**Solution**: 
-- Run `ollama list` to see the exact names of the models you have pulled.
-- Pass the correct name to the agent using the `--llm` flag, or pull the missing model using `ollama pull <model_name>`.
+**Cause**: The LLM model name has not been pulled, or the name is misspelled (e.g., `qwen:3.5-0.8b` instead of `qwen3.5:0.8b`).
+**Solution**:
+- Run `ollama list` to see the exact names of pulled models.
+- Pull the missing model: `ollama pull <model_name>`.
 
 ### 4. "Fallback configuration due to JSON parsing error" in Final History
-**Issue**: The reasoning block in the output says the agent fell back to default parameters.
-**Cause**: Small LLMs (like `0.5b` or `0.8b` parameters) sometimes fail to output strictly formatted JSON and may include conversational text. While the system attempts to cleanly extract the JSON, extreme hallucinations can cause parsing failures.
-**Solution**: If you see this frequently, use a slightly larger model capable of stricter instruction following, such as `qwen2.5:3b` or `llama3`.
+**Issue**: The reasoning block says the agent fell back to default parameters.
+**Cause**: Small LLMs (like `0.5b` or `0.8b`) sometimes fail to produce strictly formatted JSON.
+**Solution**: Use a slightly larger model capable of stricter instruction following, such as `qwen2.5:3b` or `llama3`.
+
+### 5. [RAG] WARNING: Could not initialize RAG
+**Issue**: The agent prints a RAG warning and continues without documentation context.
+**Cause**: Either `chromadb` is not installed, the embedding model was not pulled, or `finetune/ultralytics_raw.txt` is missing.
+**Solution**:
+- Ensure dependencies are installed: `uv sync`
+- Pull the embedding model: `ollama pull nomic-embed-text`
+- Verify the docs file exists: `ls finetune/ultralytics_raw.txt`
+- If the file is missing, run the scraping cell in `finetune/finetune.ipynb`

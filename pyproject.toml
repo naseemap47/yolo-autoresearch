@@ -1,10 +1,12 @@
 [project]
 name = "yolo-autoresearch"
-version = "0.1.0"
+version = "2.2.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "chromadb>=0.6.0",
     "fastapi>=0.138.1",
     "langchain-community>=0.4.2",
     "langchain-ollama>=1.1.0",

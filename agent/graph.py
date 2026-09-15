@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 from .api_client import GPUClient
 from .llm_planner import Planner
@@ -13,9 +13,13 @@ class AgentState(TypedDict):
     current_config: Dict[str, Any]
     final_result: str
 
-def create_agent_graph(host: str = "192.168.0.84", model_name: str = "qwen3.5:0.8b"):
+def create_agent_graph(
+    host: str = "192.168.0.84",
+    model_name: str = "qwen3.5:0.8b",
+    retriever: Optional[object] = None,
+):
     client = GPUClient(host=host)
-    planner = Planner(model_name=model_name)
+    planner = Planner(model_name=model_name, retriever=retriever)
     
     def analyze_data(state: AgentState):
         print(f"Cycle {state['current_cycle'] + 1}: Analyzing dataset...")
@@ -40,7 +44,9 @@ def create_agent_graph(host: str = "192.168.0.84", model_name: str = "qwen3.5:0.
             epochs=config.get("epochs", 10),
             batch_size=config.get("batch_size", 16),
             imgsz=config.get("imgsz", 640),
-            lr0=config.get("lr0", 0.01)
+            lr0=config.get("lr0", 0.01),
+            weight_decay=config.get("weight_decay", 0.0005),
+            close_mosaic=config.get("close_mosaic", 10),
         )
         print(f"Training started with task ID: {task_id}")
         
@@ -99,3 +105,4 @@ def create_agent_graph(host: str = "192.168.0.84", model_name: str = "qwen3.5:0.
     )
     
     return workflow.compile()
+
