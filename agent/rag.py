@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Load Ultralytics Docs
 # ---------------------------------------------------------------------------
 
-def load_ultralytics_docs():
+def load_ultralytics_docs(docs_path: str = "finetune/ultralytics_raw.txt"):
     urls = [
         "https://docs.ultralytics.com/modes/train#introduction", 
         "https://www.ultralytics.com/glossary/epoch#the-role-of-epochs-in-optimization",
@@ -72,7 +72,7 @@ def load_ultralytics_docs():
                 scraped_data.append(text)
 
     # Save raw text chunks for the next step
-    with open("finetune/ultralytics_raw.txt", "w", encoding="utf-8") as f:
+    with open(docs_path, "w", encoding="utf-8") as f:
         f.write("\n---DOCUMENT SPLIT---\n".join(scraped_data))
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,9 @@
-finetune.ipynb
-ultralytics_raw.txt
-social_posts.md
-ultralytics_dataset.jsonl
+*.ipynb
+*.txt
+*.jsonl
+.env
+llama.cpp/
+qwen3.5_lora_adapter/
+qwen3.5_lora_finetuning/
+qwen3.5_merged/
+*.gguf
