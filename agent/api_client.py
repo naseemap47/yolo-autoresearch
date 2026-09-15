@@ -5,9 +5,9 @@ class GPUClient:
     def __init__(self, host: str = "192.168.0.84", port: int = 8000):
         self.base_url = f"http://{host}:{port}"
         
-    def analyze_dataset(self, data_yaml_path: str, sample_size: int = 100):
+    def analyze_dataset(self, data_yaml_path: str):
         url = f"{self.base_url}/dataset/analyze"
-        res = requests.post(url, json={"data_yaml_path": data_yaml_path, "sample_size": sample_size})
+        res = requests.post(url, json={"data_yaml_path": data_yaml_path})
         res.raise_for_status()
         return res.json()
         
@@ -28,6 +28,7 @@ class GPUClient:
         warmup_epochs: float = 3.0,
         warmup_momentum: float = 0.8,
         warmup_bias_lr: float = 0.1,
+        # distill_model: str = None,
         cos_lr: bool = False,
         amp: bool = True,
         patience: int = 20,
@@ -71,6 +72,7 @@ class GPUClient:
             "warmup_epochs": warmup_epochs,
             "warmup_momentum": warmup_momentum,
             "warmup_bias_lr": warmup_bias_lr,
+            # "distill_model": distill_model,
             "cos_lr": cos_lr,
             "amp": amp,
             "patience": patience,

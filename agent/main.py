@@ -1,19 +1,16 @@
-import argparse
 import yaml
 import os
 from .graph import create_agent_graph
 from .rag import get_or_build_vectorstore, UltralyticsRetriever
+from .constants import CONFIG_PATH
+
 
 def main():
-    parser = argparse.ArgumentParser(description="YOLO Auto-Research Agent")
-    parser.add_argument("--config", type=str, default="config/settings.yaml", help="Path to config file")
-    args = parser.parse_args()
-
-    if not os.path.exists(args.config):
-        print(f"Config file not found at {args.config}. Please create it.")
+    if not os.path.exists(CONFIG_PATH):
+        print(f"Config file not found at {CONFIG_PATH}. Please create it.")
         return
 
-    with open(args.config, 'r') as f:
+    with open(CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
 
     agent_cfg = config.get("agent", {})
